@@ -1,69 +1,149 @@
-<style>
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
-    .modal-content { background: #0a1118; border: 1px solid var(--neon); padding: 30px; border-radius: 20px; width: 80%; }
-    .choice-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; margin: 10px 0; width: 100%; border-radius: 10px; cursor: pointer; }
-</style>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root { --neon: #00f2ff; --pink: #ff0055; --bg: #050a10; }
+        body { background: var(--bg); color: white; font-family: sans-serif; text-align: center; margin: 0; }
+        .glass { background: rgba(255,255,255,0.03); border: 1px solid var(--neon); border-radius: 20px; padding: 20px; margin: 15px; box-shadow: 0 0 15px rgba(0,242,255,0.2); }
+        
+        /* Game Viewport */
+        #game-view { font-size: 70px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+        .spin { animation: spinAnim 0.1s infinite linear; }
+        @keyframes spinAnim { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
 
-<div class="glass-card" style="display: flex; gap: 10px; padding: 10px;">
-    <button onclick="openDepModal('STARS')" style="flex:1; color:gold; border:1px solid gold; background:none; border-radius:10px; padding:10px;">⭐ STARS</button>
-    <button onclick="openDepModal('TON')" style="flex:1; color:#0088cc; border:1px solid #0088cc; background:none; border-radius:10px; padding:10px;">💎 TON</button>
-    <button onclick="openDepModal('USDT')" style="flex:1; color:#26a17b; border:1px solid #26a17b; background:none; border-radius:10px; padding:10px;">💵 USDT</button>
-</div>
+        /* Menu */
+        .tabs { display: flex; justify-content: center; gap: 10px; margin: 20px; }
+        .tab { padding: 10px 20px; border: 1px solid var(--neon); border-radius: 10px; opacity: 0.5; cursor: pointer; }
+        .tab.active { opacity: 1; background: var(--neon); color: black; }
 
-<div id="depModal" class="modal">
-    <div class="modal-content">
-        <h3 id="modalTitle" style="color:var(--neon)">Dépôt</h3>
-        <input type="number" id="depAmount" class="input-bet" style="width:90%" placeholder="Montant">
-        <div id="platformChoice">
-            <button class="choice-btn" onclick="confirmDeposit('XROCKET')">🚀 via xRocket</button>
-            <button class="choice-btn" onclick="confirmDeposit('CRYPTOBOT')">🤖 via CryptoBot</button>
-        </div>
-        <button onclick="closeModal()" style="background:none; border:none; color:grey; margin-top:10px;">Annuler</button>
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: #0a1118; padding: 30px; border-radius: 20px; border: 1px solid var(--neon); width: 80%; }
+        
+        .btn-pay { background: var(--neon); border: none; padding: 15px; width: 100%; margin: 5px 0; border-radius: 10px; font-weight: bold; }
+        .btn-main { background: none; border: 2px solid var(--neon); color: var(--neon); padding: 15px; border-radius: 50px; width: 80%; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="glass">
+        <div style="font-size: 10px; opacity: 0.6;">VOTRE SOLDE</div>
+        <div id="userBal" style="font-size: 30px; font-weight: bold;">0.00</div>
     </div>
-</div>
 
-<script>
-    let selectedAsset = '';
+    <div class="tabs">
+        <div class="tab active" id="t-slots" onclick="switchG('slots')">🎰 SLOTS</div>
+        <div class="tab" id="t-dice" onclick="switchG('dice')">🎲 DÉS</div>
+    </div>
 
-    function openDepModal(asset) {
-        selectedAsset = asset;
-        const min = { STARS: 5, TON: 0.2, USDT: 0.4 };
-        document.getElementById('modalTitle').innerText = `Dépôt ${asset} (Min: ${min[asset]})`;
-        document.getElementById('depModal').style.display = 'flex';
-        
-        // Cacher les plateformes si c'est des Stars
-        document.getElementById('platformChoice').style.display = (asset === 'STARS') ? 'none' : 'block';
-        if(asset === 'STARS') {
-            const btnStars = document.createElement('button');
-            btnStars.className = "choice-btn";
-            btnStars.innerText = "⭐ Payer en Stars";
-            btnStars.onclick = () => confirmDeposit('TELEGRAM');
-            btnStars.id = "tmpBtn";
-            document.getElementById('modalContent').appendChild(btnStars);
+    <div class="glass">
+        <div id="game-view">🎰🎰🎰</div>
+        <input type="number" id="bet" style="background:none; border:1px solid #333; color:white; padding:10px; width:60%; border-radius:10px; text-align:center;" placeholder="MISE">
+        <br>
+        <button class="btn-main" onclick="playGame()">PARIER</button>
+    </div>
+
+    <div class="glass" style="display:flex; gap:10px;">
+        <button onclick="openModal('STARS')" style="flex:1; color:gold; border:1px solid gold; background:none; border-radius:10px; padding:10px;">STARS</button>
+        <button onclick="openModal('TON')" style="flex:1; color:var(--neon); border:1px solid var(--neon); background:none; border-radius:10px; padding:10px;">TON</button>
+        <button onclick="openModal('USDT')" style="flex:1; color:#26a17b; border:1px solid #26a17b; background:none; border-radius:10px; padding:10px;">USDT</button>
+    </div>
+
+    <div id="depModal" class="modal">
+        <div class="modal-content">
+            <h2 id="mTitle">Dépôt</h2>
+            <input type="number" id="mAmount" style="padding:10px; width:90%; border-radius:10px; margin-bottom:15px;" placeholder="Montant">
+            <div id="pChoices">
+                <button class="btn-pay" onclick="doDep('XROCKET')">🚀 XROCKET</button>
+                <button class="btn-pay" onclick="doDep('CRYPTOBOT')">🤖 CRYPTOBOT</button>
+            </div>
+            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:15px;">Fermer</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        let currentGame = 'slots';
+        let userId = tg.initDataUnsafe.user?.id || 123;
+        let selectedAsset = '';
+
+        function switchG(g) {
+            currentGame = g;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('t-'+g).classList.add('active');
+            document.getElementById('game-view').innerText = (g === 'dice') ? '🎲' : '🎰🎰🎰';
         }
-    }
 
-    function closeModal() {
-        document.getElementById('depModal').style.display = 'none';
-        if(document.getElementById('tmpBtn')) document.getElementById('tmpBtn').remove();
-    }
+        async function playGame() {
+            const bet = parseFloat(document.getElementById('bet').value);
+            const view = document.getElementById('game-view');
+            if(!bet || bet <= 0) return tg.showAlert("Mise invalide");
 
-    async function confirmDeposit(platform) {
-        const amount = document.getElementById('depAmount').value;
-        if(!amount) return alert("Entrez un montant");
+            view.classList.add('spin');
+            const r = await fetch('/api/play', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: userId, bet, game: currentGame })
+            });
+            const data = await r.json();
 
-        const r = await fetch('/api/deposit', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id: userId, asset: selectedAsset, amount: amount, platform: platform })
-        });
-        
-        const d = await r.json();
-        if(d.success) {
-            tg.openTelegramLink(d.url);
-            closeModal();
-        } else {
-            tg.showAlert(d.message);
+            setTimeout(() => {
+                view.classList.remove('spin');
+                if(data.error) return tg.showAlert(data.error);
+                
+                if(currentGame === 'dice') {
+                    view.innerText = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][data.result];
+                } else {
+                    view.innerText = data.result.join('');
+                }
+                document.getElementById('userBal').innerText = data.newBalance.toFixed(2);
+                if(data.win > 0) tg.HapticFeedback.notificationOccurred('success');
+            }, 800);
         }
-    }
-</script>
+
+        function openModal(asset) {
+            selectedAsset = asset;
+            document.getElementById('mTitle').innerText = `Dépôt ${asset}`;
+            document.getElementById('pChoices').style.display = (asset === 'STARS') ? 'none' : 'block';
+            if(asset === 'STARS') {
+                const b = document.createElement('button');
+                b.className = "btn-pay"; b.innerText = "⭐ PAYER STARS";
+                b.onclick = () => doDep('TELEGRAM'); b.id = "sBtn";
+                document.getElementById('pChoices').after(b);
+            }
+            document.getElementById('depModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('depModal').style.display = 'none';
+            if(document.getElementById('sBtn')) document.getElementById('sBtn').remove();
+        }
+
+        async function doDep(plat) {
+            const amount = document.getElementById('mAmount').value;
+            const r = await fetch('/api/deposit', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: userId, asset: selectedAsset, amount, platform: plat })
+            });
+            const d = await r.json();
+            if(d.success) tg.openTelegramLink(d.url);
+            else tg.showAlert(d.message);
+        }
+
+        async function withdraw() {
+            const asset = prompt("Monnaie (TON/USDT/STARS) ?").toUpperCase();
+            const amount = prompt("Montant ?");
+            const address = prompt("Adresse ou ID xRocket :");
+            if(amount && address) {
+                const r = await fetch('/api/withdraw', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: userId, name: "Joueur", asset, amount, address })
+                });
+                const res = await r.json();
+                tg.showAlert(res.message);
+            }
+        }
+    </script>
+</body>
+</html>
