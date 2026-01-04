@@ -1,30 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --neon: #00f2ff; --bg: #010409; --card: rgba(0, 242, 255, 0.05); }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; overflow-x: hidden; }
         .glass { background: var(--card); border: 1px solid rgba(0,242,255,0.2); border-radius: 25px; padding: 20px; margin: 15px; backdrop-filter: blur(10px); }
         .balance { font-size: 38px; color: var(--neon); text-shadow: 0 0 15px var(--neon); font-weight: bold; }
         
-        /* Onglets Jeux */
+        /* Menu Jeux */
         .tabs { display: flex; justify-content: center; gap: 10px; margin: 15px; }
-        .tab { padding: 12px 25px; border: 1px solid var(--neon); border-radius: 15px; opacity: 0.4; cursor: pointer; font-size: 14px; }
+        .tab { padding: 12px 25px; border: 1px solid var(--neon); border-radius: 15px; opacity: 0.4; cursor: pointer; font-size: 14px; transition: 0.3s; }
         .tab.active { opacity: 1; background: var(--neon); color: black; box-shadow: 0 0 20px var(--neon); }
 
-        #game-display { font-size: 80px; min-height: 120px; margin: 25px 0; transition: transform 0.2s; }
+        /* Animation Zone */
+        #game-display { font-size: 80px; min-height: 120px; margin: 25px 0; display: flex; align-items: center; justify-content: center; }
         .anim-spin { animation: spin 0.1s infinite linear; }
         @keyframes spin { from {transform: rotateX(0deg)} to {transform: rotateX(360deg)} }
 
-        .btn-main { background: var(--neon); color: black; border: none; padding: 18px; width: 80%; border-radius: 50px; font-weight: bold; font-size: 18px; cursor: pointer; box-shadow: 0 0 15px var(--neon); }
+        .btn-main { background: var(--neon); color: black; border: none; padding: 18px; width: 85%; border-radius: 50px; font-weight: bold; font-size: 18px; cursor: pointer; box-shadow: 0 0 15px var(--neon); }
+        
+        /* Modal Système */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; }
-        .btn-choice { background: rgba(255,255,255,0.1); border: 1px solid var(--neon); color: white; padding: 15px; width: 100%; border-radius: 15px; margin: 10px 0; font-weight: bold; }
+        .modal-content { width: 85%; }
+        .btn-choice { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 100%; border-radius: 15px; margin: 8px 0; font-weight: bold; font-size: 14px; }
+        
+        input { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 80%; border-radius: 15px; text-align: center; font-size: 18px; outline: none; }
+        .footer-btns { display: flex; gap: 10px; padding: 0 15px; margin-top: 10px; }
+        .btn-action { flex: 1; background: none; padding: 12px; border-radius: 12px; font-weight: bold; font-size: 11px; cursor: pointer; }
     </style>
 </head>
 <body>
+
     <div class="glass">
         <div style="font-size: 10px; letter-spacing: 2px; opacity: 0.7;">TOTAL CREDITS</div>
         <div class="balance" id="userBal">0.00</div>
@@ -37,34 +46,49 @@
 
     <div class="glass">
         <div id="game-display">🎰🎰🎰</div>
-        <input type="number" id="bet" style="background:none; border:1px solid var(--neon); color:white; padding:15px; width:60%; border-radius:15px; text-align:center; font-size:20px;" placeholder="MISE">
-        <br>
+        <input type="number" id="bet" placeholder="MISE">
+        <br><br>
         <button class="btn-main" onclick="play()">LANCER LE PARI</button>
     </div>
 
-    <div style="display:flex; gap:10px; padding: 0 15px;">
-        <button onclick="openModal('STARS')" style="flex:1; border:1px solid gold; color:gold; background:none; padding:15px; border-radius:15px;">STARS</button>
-        <button onclick="openModal('TON')" style="flex:1; border:1px solid var(--neon); color:var(--neon); background:none; padding:15px; border-radius:15px;">TON</button>
-        <button onclick="openModal('USDT')" style="flex:1; border:1px solid #26a17b; color:#26a17b; background:none; padding:15px; border-radius:15px;">USDT</button>
+    <div class="footer-btns">
+        <button onclick="openSystem('DEP', 'STARS')" class="btn-action" style="border:1px solid gold; color:gold;">DÉPÔT ⭐</button>
+        <button onclick="openSystem('DEP', 'TON')" class="btn-action" style="border:1px solid var(--neon); color:var(--neon);">DÉPÔT CRYPTO</button>
+        <button onclick="openSystem('WIT', 'STARS')" class="btn-action" style="border:1px solid #ff4444; color:#ff4444;">RETRAIT</button>
     </div>
 
-    <div id="payModal" class="modal">
-        <div class="glass" style="width: 80%;">
-            <h2 id="modalTitle" style="color:var(--neon)">Dépôt</h2>
-            <input type="number" id="depAmount" style="padding:15px; width:90%; border-radius:10px; margin-bottom:20px;" placeholder="Montant">
-            <div id="cryptoOptions">
-                <button class="btn-choice" onclick="startDep('XROCKET')">🚀 via xRocket</button>
-                <button class="btn-choice" onclick="startDep('CRYPTOBOT')">🤖 via CryptoBot</button>
+    <div id="systemModal" class="modal">
+        <div class="glass modal-content">
+            <h2 id="modalTitle" style="color:var(--neon); margin-top:0;">Dépôt</h2>
+            <p id="modalLimit" style="font-size: 12px; opacity: 0.6;"></p>
+            
+            <input type="number" id="systemAmount" placeholder="Montant">
+            
+            <div id="platformChoices" style="margin-top: 20px;">
+                <button class="btn-choice" id="btn-xrocket" onclick="executeAction('XROCKET')">🚀 via xRocket</button>
+                <button class="btn-choice" id="btn-cryptobot" onclick="executeAction('CRYPTOBOT')">🤖 via CryptoBot</button>
+                <button class="btn-choice" id="btn-stars" style="display:none; color:gold;" onclick="executeAction('TELEGRAM')">⭐ via Telegram Stars</button>
             </div>
-            <button class="btn-choice" id="starBtn" style="display:none; color:gold;" onclick="startDep('TELEGRAM')">⭐ PAYER EN STARS</button>
-            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:15px;">ANNULER</button>
+            
+            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:20px; opacity:0.5;">ANNULER</button>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let userId = tg.initDataUnsafe.user?.id || 0;
+        let userName = tg.initDataUnsafe.user?.first_name || "Joueur";
+        
         let currentGame = 'slots';
-        let currentAsset = '';
+        let currentMode = 'DEP'; // DEP ou WIT
+        let currentAsset = 'TON';
+
+        const LIMITS = {
+            DEP: { STARS: 5, TON: 0.2, USDT: 0.4 },
+            WIT: { STARS: 15, TON: 0.7, USDT: 1 }
+        };
 
         function changeGame(type) {
             currentGame = type;
@@ -73,56 +97,118 @@
             document.getElementById('game-display').innerText = (type === 'dice') ? '🎲' : '🎰🎰🎰';
         }
 
+        // --- SYSTÈME DE JEU ---
         async function play() {
             const bet = parseFloat(document.getElementById('bet').value);
             const display = document.getElementById('game-display');
-            if(!bet || bet <= 0) return;
+            if(!bet || bet <= 0) return tg.showAlert("Entrez une mise valide.");
 
             display.classList.add('anim-spin');
-            const r = await fetch('/api/play', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: tg.initDataUnsafe.user.id, bet, game: currentGame })
-            });
-            const data = await r.json();
+            
+            try {
+                const r = await fetch('/api/play', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: userId, bet: bet, game: currentGame })
+                });
+                const data = await r.json();
 
-            setTimeout(() => {
+                setTimeout(() => {
+                    display.classList.remove('anim-spin');
+                    if(data.error) return tg.showAlert(data.error);
+                    
+                    if(currentGame === 'dice') {
+                        const dice = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+                        display.innerText = dice[data.result];
+                    } else {
+                        display.innerText = data.result.join('');
+                    }
+                    
+                    document.getElementById('userBal').innerText = data.newBalance.toFixed(2);
+                    if(data.win > 0) {
+                        tg.HapticFeedback.notificationOccurred('success');
+                    }
+                }, 800);
+            } catch(e) {
                 display.classList.remove('anim-spin');
-                if(data.error) return tg.showAlert(data.error);
-                
-                if(currentGame === 'dice') {
-                    const dice = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-                    display.innerText = dice[data.result];
-                } else {
-                    display.innerText = data.result.join('');
-                }
-                
-                document.getElementById('userBal').innerText = data.newBalance.toFixed(2);
-                if(data.win > 0) {
-                    tg.HapticFeedback.notificationOccurred('success');
-                    tg.showAlert(`GAGNÉ : +${data.win} !`);
-                }
-            }, 800);
+                tg.showAlert("Erreur de connexion au jeu.");
+            }
         }
 
-        function openModal(asset) {
+        // --- SYSTÈME FINANCIER ---
+        function openSystem(mode, asset) {
+            currentMode = mode;
             currentAsset = asset;
-            document.getElementById('modalTitle').innerText = `Dépôt ${asset}`;
-            document.getElementById('cryptoOptions').style.display = (asset === 'STARS') ? 'none' : 'block';
-            document.getElementById('starBtn').style.display = (asset === 'STARS') ? 'block' : 'none';
-            document.getElementById('payModal').style.display = 'flex';
+            
+            const title = mode === 'DEP' ? "Dépôt" : "Retrait";
+            const limit = LIMITS[mode][asset];
+            
+            document.getElementById('modalTitle').innerText = `${title} ${asset}`;
+            document.getElementById('modalLimit').innerText = `Minimum requis: ${limit} ${asset}`;
+            document.getElementById('systemModal').style.display = 'flex';
+
+            // Gérer l'affichage des boutons
+            if (asset === 'STARS' && mode === 'DEP') {
+                document.getElementById('btn-xrocket').style.display = 'none';
+                document.getElementById('btn-cryptobot').style.display = 'none';
+                document.getElementById('btn-stars').style.display = 'block';
+            } else {
+                document.getElementById('btn-xrocket').style.display = 'block';
+                document.getElementById('btn-cryptobot').style.display = 'block';
+                document.getElementById('btn-stars').style.display = 'none';
+            }
         }
 
-        function closeModal() { document.getElementById('payModal').style.display = 'none'; }
+        function closeModal() {
+            document.getElementById('systemModal').style.display = 'none';
+            document.getElementById('systemAmount').value = '';
+        }
 
-        async function startDep(plat) {
-            const amount = document.getElementById('depAmount').value;
-            const r = await fetch('/api/deposit', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: tg.initDataUnsafe.user.id, asset: currentAsset, amount, platform: plat })
-            });
-            const d = await r.json();
-            if(d.success) { tg.openTelegramLink(d.url); closeModal(); }
-            else tg.showAlert(d.message);
+        async function executeAction(platform) {
+            const amount = parseFloat(document.getElementById('systemAmount').value);
+            const min = LIMITS[currentMode][currentAsset];
+
+            if(!amount || amount < min) {
+                return tg.showAlert(`Le montant minimum est de ${min} ${currentAsset}`);
+            }
+
+            let address = "";
+            if(currentMode === 'WIT') {
+                address = prompt(`Entrez votre adresse ${currentAsset} (ou ID pour ${platform}) :`);
+                if(!address) return;
+            }
+
+            const endpoint = currentMode === 'DEP' ? '/api/deposit' : '/api/withdraw';
+            
+            try {
+                const r = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: userId,
+                        name: userName,
+                        asset: currentAsset,
+                        amount: amount,
+                        platform: platform,
+                        address: address
+                    })
+                });
+                
+                const data = await r.json();
+                
+                if(data.success) {
+                    if(currentMode === 'DEP') {
+                        tg.openTelegramLink(data.url);
+                    } else {
+                        tg.showAlert(data.message);
+                    }
+                    closeModal();
+                } else {
+                    tg.showAlert(data.message || "Une erreur est survenue.");
+                }
+            } catch(e) {
+                tg.showAlert("Erreur de communication avec le serveur.");
+            }
         }
     </script>
 </body>
