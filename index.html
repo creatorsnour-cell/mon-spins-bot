@@ -1,120 +1,137 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --neon: #00f2ff; --bg: #050a10; --card: rgba(255,255,255,0.05); }
-        body { background: var(--bg); color: white; font-family: 'Orbitron', sans-serif; margin: 0; text-align: center; }
-        .glass { background: var(--card); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; margin: 15px; padding: 20px; }
-        .balance-box { font-size: 30px; color: var(--neon); text-shadow: 0 0 10px var(--neon); margin-top: 10px; }
+        :root { --neon: #00f2ff; --pink: #ff0055; --bg: #03070b; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; overflow: hidden; }
         
-        /* Animations Game */
-        #display-area { font-size: 80px; min-height: 100px; margin: 20px 0; }
-        .spin { animation: rotate 0.1s infinite linear; }
-        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .shake { animation: shakeBtn 0.2s infinite; }
-        @keyframes shakeBtn { 0% { transform: translate(1px); } 50% { transform: translate(-1px); } }
+        /* Design Futuriste */
+        .app-container { height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; }
+        .glass-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(0,242,255,0.2); border-radius: 25px; padding: 20px; backdrop-filter: blur(15px); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        
+        .balance-title { font-size: 10px; letter-spacing: 2px; color: var(--neon); opacity: 0.8; }
+        .balance-value { font-size: 35px; font-weight: bold; text-shadow: 0 0 15px var(--neon); }
 
-        .btn-main { background: none; border: 2px solid var(--neon); color: var(--neon); padding: 15px; border-radius: 50px; width: 100%; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-main:active { background: var(--neon); color: black; box-shadow: 0 0 20px var(--neon); }
-        
-        input { background: rgba(0,0,0,0.5); border: 1px solid var(--neon); color: white; padding: 12px; border-radius: 10px; width: 80%; text-align: center; margin-bottom: 10px; }
+        /* Zone de Jeu Dynamique */
+        #game-zone { margin: 30px 0; min-height: 150px; display: flex; align-items: center; justify-content: center; }
+        .slot-item { font-size: 60px; margin: 0 5px; transition: 0.3s; }
+        .dice-item { font-size: 90px; filter: drop-shadow(0 0 10px var(--neon)); }
+
+        .game-selector { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .game-tab { padding: 10px 20px; border-radius: 15px; border: 1px solid var(--neon); font-size: 12px; cursor: pointer; opacity: 0.5; }
+        .game-tab.active { opacity: 1; background: var(--neon); color: black; box-shadow: 0 0 15px var(--neon); }
+
+        .input-bet { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: white; padding: 15px; border-radius: 15px; width: 60%; font-size: 18px; text-align: center; }
+        .btn-play { background: linear-gradient(45deg, var(--neon), #0072ff); border: none; color: black; padding: 18px; border-radius: 15px; width: 100%; font-weight: bold; margin-top: 15px; cursor: pointer; }
+
+        /* Animations */
+        .spinning { animation: spin 0.1s infinite linear; }
+        @keyframes spin { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
     </style>
 </head>
 <body>
-    <div class="glass">
-        <div style="font-size: 12px; opacity: 0.6;">CREDITS CASINO</div>
-        <div class="balance-box" id="userBal">0.00</div>
-    </div>
+    <div class="app-container">
+        <div class="glass-card">
+            <div class="balance-title">NETWORK WALLET</div>
+            <div class="balance-value" id="userBal">0.00</div>
+        </div>
 
-    <div class="glass">
-        <select id="gameSelect" style="background:none; color:white; border:none; font-family:'Orbitron';">
-            <option value="slots">🎰 MACHINE À SOUS</option>
-            <option value="dice">🎲 DÉS NEON</option>
-        </select>
-        <div id="display-area">🎰</div>
-        <input type="number" id="bet" placeholder="MONTANT MISE">
-        <button class="btn-main" onclick="play()">LANCER LE PARI</button>
-    </div>
+        <div>
+            <div class="game-selector">
+                <div class="game-tab active" id="tab-slots" onclick="switchGame('slots')">🎰 CASINO</div>
+                <div class="game-tab" id="tab-dice" onclick="switchGame('dice')">🎲 DÉS</div>
+            </div>
 
-    <div class="glass" style="display:flex; gap:10px;">
-        <button onclick="deposit('STARS')" style="flex:1; color:gold; border:1px solid gold; background:none; border-radius:10px; padding:10px; font-size:10px;">DÉPÔT ⭐</button>
-        <button onclick="deposit('TON')" style="flex:1; color:#0088cc; border:1px solid #0088cc; background:none; border-radius:10px; padding:10px; font-size:10px;">DÉPÔT CRYPTO</button>
-        <button onclick="withdraw()" style="flex:1; color:#ff0055; border:1px solid #ff0055; background:none; border-radius:10px; padding:10px; font-size:10px;">RETRAIT</button>
+            <div class="glass-card">
+                <div id="game-zone">
+                    <span class="slot-item">🍒</span><span class="slot-item">🍒</span><span class="slot-item">🍒</span>
+                </div>
+                <input type="number" id="bet" class="input-bet" placeholder="MISE">
+                <button class="btn-play" onclick="startGame()">PLACER LE PARI</button>
+            </div>
+        </div>
+
+        <div class="glass-card" style="display: flex; gap: 10px; padding: 10px;">
+            <button onclick="deposit()" style="flex:1; background:none; border:1px solid var(--neon); color:var(--neon); border-radius:10px; padding:10px; font-size:10px;">DÉPÔT</button>
+            <button onclick="withdraw()" style="flex:1; background:none; border:1px solid var(--pink); color:var(--pink); border-radius:10px; padding:10px; font-size:10px;">RETRAIT</button>
+        </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
+        let currentGame = 'slots';
         let userId = tg.initDataUnsafe.user?.id || 123;
-        let userName = tg.initDataUnsafe.user?.first_name || "Joueur";
 
-        async function play() {
+        function switchGame(type) {
+            currentGame = type;
+            document.querySelectorAll('.game-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + type).classList.add('active');
+            
+            const zone = document.getElementById('game-zone');
+            if(type === 'dice') {
+                zone.innerHTML = '<span class="dice-item">🎲</span>';
+            } else {
+                zone.innerHTML = '<span class="slot-item">🎰</span><span class="slot-item">🎰</span><span class="slot-item">🎰</span>';
+            }
+        }
+
+        async function startGame() {
             const bet = parseFloat(document.getElementById('bet').value);
-            const game = document.getElementById('gameSelect').value;
-            const area = document.getElementById('display-area');
+            const zone = document.getElementById('game-zone');
+            if (!bet || bet <= 0) return tg.showAlert("Mise invalide");
 
-            if (isNaN(bet) || bet <= 0) return tg.showAlert("Mise invalide.");
-
-            area.classList.add('spin');
-            area.innerText = "⏳";
+            zone.classList.add('spinning');
 
             const r = await fetch('/api/play', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: userId, bet, game })
+                body: JSON.stringify({ id: userId, bet, game: currentGame })
             });
             const data = await r.json();
 
-            if(data.error) {
-                area.classList.remove('spin');
-                area.innerText = "❌";
-                return tg.showAlert(data.error);
-            }
-
             setTimeout(() => {
-                area.classList.remove('spin');
-                area.innerText = Array.isArray(data.result) ? data.result.join(' ') : (['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][data.result]);
-                document.getElementById('userBal').innerText = data.newBalance.toFixed(2);
-                if(data.win > 0) {
-                    tg.HapticFeedback.notificationOccurred('success');
-                    tg.showAlert(`GAGNÉ : +${data.win} !`);
+                zone.classList.remove('spinning');
+                if(data.error) return tg.showAlert(data.error);
+
+                if(currentGame === 'dice') {
+                    const diceFaces = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+                    zone.innerHTML = `<span class="dice-item">${diceFaces[data.result]}</span>`;
+                } else {
+                    zone.innerHTML = data.result.map(i => `<span class="slot-item">${i}</span>`).join('');
                 }
-            }, 1200);
+                
+                document.getElementById('userBal').innerText = data.newBalance.toFixed(2);
+                if(data.win > 0) tg.HapticFeedback.notificationOccurred('success');
+            }, 1000);
         }
 
-        async function deposit(asset) {
-            const min = { STARS: 5, TON: 0.2, USDT: 0.4 };
-            const amount = prompt(`Montant (${asset}) ? Min: ${min[asset]}`);
-            if(!amount || amount < min[asset]) return;
-
+        async function deposit() {
+            const asset = prompt("Monnaie (STARS / TON / USDT) ?").toUpperCase();
+            const amount = prompt("Montant ?");
             let platform = 'CRYPTOBOT';
-            if(asset !== 'STARS') {
-                platform = confirm("OK pour xRocket 🚀\nANNULER pour CryptoBot 🤖") ? 'XROCKET' : 'CRYPTOBOT';
-            }
+            if(asset !== 'STARS') platform = confirm("OK pour xRocket, Annuler pour CryptoBot") ? 'XROCKET' : 'CRYPTOBOT';
 
             const r = await fetch('/api/deposit', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: userId, amount, asset, platform })
+                body: JSON.stringify({ id: userId, asset, amount, platform })
             });
             const d = await r.json();
             if(d.success) tg.openTelegramLink(d.url);
+            else tg.showAlert(d.message);
         }
 
         async function withdraw() {
-            const asset = prompt("Monnaie (STARS / TON / USDT) ?").toUpperCase();
+            const asset = prompt("Monnaie ?");
             const amount = prompt("Montant ?");
-            const address = prompt("Adresse de retrait :");
-            if(amount && address) {
-                const r = await fetch('/api/withdraw', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: userId, name: userName, amount, address, asset })
-                });
-                const res = await r.json();
-                tg.showAlert(res.message);
-            }
+            const address = prompt("Adresse ?");
+            const r = await fetch('/api/withdraw', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: userId, name: "User", asset, amount, address })
+            });
+            const res = await r.json();
+            tg.showAlert(res.message || "Erreur");
         }
     </script>
 </body>
