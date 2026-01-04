@@ -1,40 +1,117 @@
-async function pay(asset) {
-    const min = { 'STARS': 5, 'TON': 0.2, 'USDT': 0.4 };
-    const amount = prompt(`Montant du dépôt (${asset}) ?\nMinimum : ${min[asset]}`);
-    
-    if(!amount || amount < min[asset]) {
-        return tg.showAlert(`Le montant doit être d'au moins ${min[asset]} ${asset}`);
-    }
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --neon: #00f2ff; --pink: #ff0055; --bg: #050a10; }
+        body { background: var(--bg); color: white; font-family: 'Orbitron', sans-serif; text-align: center; margin: 0; overflow-x: hidden; }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; }
+        .header { padding: 20px; border-bottom: 2px solid var(--neon); box-shadow: 0 0 15px var(--neon); }
+        .balance-val { font-size: 32px; color: var(--neon); text-shadow: 0 0 10px var(--neon); }
+        
+        .game-card { margin: 20px; padding: 25px; }
+        #display-area { font-size: 80px; min-height: 100px; margin: 20px 0; transition: transform 0.2s; }
+        .anim-spin { animation: spin 0.1s infinite linear; }
+        @keyframes spin { from {transform: rotateX(0deg)} to {transform: rotateX(360deg)} }
 
-    const r = await fetch('/api/deposit', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ id: userId, amount, asset })
-    });
-    const data = await r.json();
-    if(data.success) tg.openTelegramLink(data.url);
-    else tg.showAlert(data.message || "Erreur lors du dépôt.");
-}
+        .btn-neon { background: none; border: 2px solid var(--neon); color: var(--neon); padding: 15px; border-radius: 50px; width: 100%; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-neon:active { background: var(--neon); color: black; box-shadow: 0 0 20px var(--neon); }
+        
+        input { background: rgba(0,0,0,0.5); border: 1px solid var(--neon); color: white; padding: 12px; border-radius: 10px; width: 80%; margin-bottom: 15px; text-align: center; }
+        .footer-nav { position: fixed; bottom: 0; width: 100%; display: flex; background: #0a1118; padding: 15px 0; border-top: 1px solid var(--neon); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="font-size: 10px; opacity: 0.7;">TOTAL CREDITS</div>
+        <div class="balance-val" id="userBal">0.00</div>
+    </div>
 
-async function withdraw() {
-    const asset = prompt("Que voulez-vous retirer ? (STARS / TON / USDT)").toUpperCase();
-    if(!['STARS', 'TON', 'USDT'].includes(asset)) return tg.showAlert("Monnaie invalide.");
+    <div class="game-card glass">
+        <select id="gameSelect" style="background:none; color:white; border:none; margin-bottom:15px; font-family: 'Orbitron';">
+            <option value="slots">🎰 CYBER SLOTS</option>
+            <option value="dice">🎲 NEON DICE</option>
+        </select>
+        <div id="display-area">🎰</div>
+        <input type="number" id="bet" placeholder="MISE">
+        <button class="btn-neon" onclick="startGame()">JOUER MAINTENANT</button>
+    </div>
 
-    const minW = { 'STARS': 15, 'TON': 0.7, 'USDT': 1 };
-    const amount = prompt(`Montant à retirer ?\nMinimum : ${minW[asset]}`);
-    
-    if(!amount || amount < minW[asset]) {
-        return tg.showAlert(`Le montant minimum est de ${minW[asset]} ${asset}`);
-    }
+    <div class="game-card glass" style="display: flex; gap: 10px;">
+        <button onclick="pay('STARS')" style="flex:1; color:gold; border:1px solid gold; background:none; border-radius:10px; padding:10px; font-size:10px;">DÉPÔT ⭐</button>
+        <button onclick="pay('TON')" style="flex:1; color:#0088cc; border:1px solid #0088cc; background:none; border-radius:10px; padding:10px; font-size:10px;">DÉPÔT TON</button>
+        <button onclick="withdraw()" style="flex:1; color:var(--pink); border:1px solid var(--pink); background:none; border-radius:10px; padding:10px; font-size:10px;">RETRAIT</button>
+    </div>
 
-    const address = prompt("Entrez votre adresse USDT (ou TON) pour recevoir vos gains :");
-    if(amount && address) {
-        const r = await fetch('/api/withdraw', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id: userId, name: userName, amount, address, asset })
-        });
-        const res = await r.json();
-        tg.showAlert(res.message);
-    }
-}
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        let userId = tg.initDataUnsafe.user?.id || 123;
+        let userName = tg.initDataUnsafe.user?.first_name || "User";
+
+        async function startGame() {
+            const bet = parseFloat(document.getElementById('bet').value);
+            const game = document.getElementById('gameSelect').value;
+            const area = document.getElementById('display-area');
+
+            if (isNaN(bet) || bet <= 0) return tg.showAlert("Entrez une mise.");
+
+            area.classList.add('anim-spin');
+            area.innerText = "🌀";
+
+            const r = await fetch('/api/play', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: userId, bet, game })
+            });
+            const data = await r.json();
+
+            if(data.error) {
+                area.classList.remove('anim-spin');
+                area.innerText = "❌";
+                return tg.showAlert(data.error);
+            }
+
+            setTimeout(() => {
+                area.classList.remove('anim-spin');
+                area.innerText = Array.isArray(data.result) ? data.result.join(' ') : (['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][data.result]);
+                document.getElementById('userBal').innerText = data.newBalance.toFixed(2);
+                if(data.win > 0) tg.HapticFeedback.notificationOccurred('success');
+            }, 1000);
+        }
+
+        async function pay(asset) {
+            const min = { STARS: 5, TON: 0.2, USDT: 0.4 };
+            const amount = prompt(`Montant (${asset}) ? Min: ${min[asset]}`);
+            if(!amount || amount < min[asset]) return tg.showAlert("Montant trop bas.");
+
+            const r = await fetch('/api/deposit', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: userId, amount, asset })
+            });
+            const data = await r.json();
+            if(data.success) tg.openTelegramLink(data.url);
+        }
+
+        async function withdraw() {
+            const asset = prompt("Retirer quoi ? (STARS / TON / USDT)").toUpperCase();
+            const minW = { STARS: 15, TON: 0.7, USDT: 1 };
+            if(!minW[asset]) return;
+
+            const amount = prompt(`Montant ? Min: ${minW[asset]}`);
+            const address = prompt("Votre adresse de réception :");
+
+            if(amount >= minW[asset] && address) {
+                const r = await fetch('/api/withdraw', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: userId, name: userName, amount, address, asset })
+                });
+                const res = await r.json();
+                tg.showAlert(res.message);
+            }
+        }
+    </script>
+</body>
+</html>
