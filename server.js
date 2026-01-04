@@ -20,14 +20,15 @@ if (fs.existsSync(DB_FILE)) {
 }
 const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-// --- LIMITES ET CONDITIONS STRICTES ---
+// --- LIMITES STRICTES ---
 const LIMITS = {
     DEP: { STARS: 5, TON: 0.2, USDT: 0.4 },
-    WIT: { STARS: 15, TON: 0.7, USDT: 1 }
+    WIT: { TON: 0.7, USDT: 1 } // Retrait STARS supprimé ici
 };
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
+// --- CHARGEMENT DU PROFIL ---
 app.post('/api/user-data', (req, res) => {
     const { id } = req.body;
     if (!db[id]) { 
@@ -65,42 +66,31 @@ app.post('/api/deposit', async (req, res) => {
     } catch (e) { res.json({ success: false, message: "Erreur API de paiement." }); }
 });
 
-// --- RETRAITS AVEC CONVERSION STARS -> USDT ---
+// --- RETRAITS (TON & USDT UNIQUEMENT) ---
 app.post('/api/withdraw', async (req, res) => {
     const { id, name, amount, asset, address, platform } = req.body;
     
+    if (asset === 'STARS') return res.json({ success: false, message: "Retrait Étoiles indisponible." });
     if (!db[id] || db[id].balance < amount) return res.json({ success: false, message: "Solde insuffisant." });
-    if (amount < LIMITS.WIT[asset]) return res.json({ success: false, message: `Minimum retrait ${asset}: ${LIMITS.WIT[asset]}` });
+    if (amount < LIMITS.WIT[asset]) return res.json({ success: false, message: `Min retrait: ${LIMITS.WIT[asset]} ${asset}` });
 
     db[id].balance -= amount;
     saveDB();
 
-    let unitToPay = asset;
-    let extraNote = "";
-
-    if (asset === 'STARS') {
-        unitToPay = "USDT";
-        extraNote = `\n⚠️ *CONVERSION ÉTOILES* : Payez l'équivalent de ${amount} Stars en *USDT*.`;
-    }
-
-    const adminMsg = `🧾 *DEMANDE DE RETRAIT*\n` +
+    const adminMsg = `🏦 *DEMANDE DE RETRAIT CRYPTO*\n` +
                      `━━━━━━━━━━━━━━━\n` +
                      `👤 Joueur: ${name} (ID: ${id})\n` +
                      `💰 Montant: ${amount} ${asset}\n` +
-                     `💸 À PAYER EN: *${unitToPay}*\n` +
                      `🔌 Via: ${platform}\n` +
                      `📍 Adresse: \`${address}\`\n` +
-                     `━━━━━━━━━━━━━━━${extraNote}`;
+                     `━━━━━━━━━━━━━━━\n\n` +
+                     `_Veuillez envoyer le chèque via ${platform}._`;
 
-    await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { 
-        chat_id: ADMIN_ID, 
-        text: adminMsg, 
-        parse_mode: 'Markdown' 
-    });
-    res.json({ success: true, message: "Demande envoyée à l'admin. Vous recevrez votre chèque bientôt." });
+    await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: ADMIN_ID, text: adminMsg, parse_mode: 'Markdown' });
+    res.json({ success: true, message: "Demande envoyée ! L'admin vous enverra un chèque." });
 });
 
-// --- JEUX ---
+// --- LOGIQUE DE JEU ---
 app.post('/api/play', (req, res) => {
     const { id, bet, game } = req.body;
     if (!db[id] || db[id].balance < bet || bet <= 0) return res.status(400).json({ error: "Solde insuffisant." });
@@ -118,12 +108,9 @@ app.post('/api/play', (req, res) => {
     }
     db[id].balance += win;
     
-    // Progression XP/Level
+    // XP & NIVEAU
     db[id].xp += 5;
-    if(db[id].xp >= (db[id].level * 50)) {
-        db[id].level++;
-        db[id].xp = 0;
-    }
+    if(db[id].xp >= (db[id].level * 50)) { db[id].level++; db[id].xp = 0; }
     
     saveDB();
     res.json({ result, win, newBalance: db[id].balance, level: db[id].level });
