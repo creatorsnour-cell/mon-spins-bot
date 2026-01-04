@@ -1,148 +1,115 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --neon: #00f2ff; --pink: #ff0055; --bg: #050a10; }
-        body { background: var(--bg); color: white; font-family: sans-serif; text-align: center; margin: 0; }
-        .glass { background: rgba(255,255,255,0.03); border: 1px solid var(--neon); border-radius: 20px; padding: 20px; margin: 15px; box-shadow: 0 0 15px rgba(0,242,255,0.2); }
+        :root { --neon: #00f2ff; --bg: #020508; --card: rgba(255,255,255,0.05); }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; }
+        .glass { background: var(--card); border: 1px solid rgba(0,242,255,0.3); border-radius: 20px; padding: 20px; margin: 15px; backdrop-filter: blur(10px); }
+        .balance { font-size: 35px; color: var(--neon); text-shadow: 0 0 10px var(--neon); font-weight: bold; }
         
-        /* Game Viewport */
-        #game-view { font-size: 70px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+        .tab-container { display: flex; justify-content: center; gap: 10px; margin: 15px; }
+        .tab { padding: 10px 25px; border: 1px solid var(--neon); border-radius: 12px; cursor: pointer; opacity: 0.4; transition: 0.3s; }
+        .tab.active { opacity: 1; background: var(--neon); color: black; box-shadow: 0 0 15px var(--neon); }
+
+        #display { font-size: 70px; min-height: 100px; margin: 20px 0; }
         .spin { animation: spinAnim 0.1s infinite linear; }
-        @keyframes spinAnim { from { transform: rotateX(0deg); } to { transform: rotateX(360deg); } }
+        @keyframes spinAnim { from {transform: rotateX(0deg)} to {transform: rotateX(360deg)} }
 
-        /* Menu */
-        .tabs { display: flex; justify-content: center; gap: 10px; margin: 20px; }
-        .tab { padding: 10px 20px; border: 1px solid var(--neon); border-radius: 10px; opacity: 0.5; cursor: pointer; }
-        .tab.active { opacity: 1; background: var(--neon); color: black; }
-
-        /* Modal */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center; }
-        .modal-content { background: #0a1118; padding: 30px; border-radius: 20px; border: 1px solid var(--neon); width: 80%; }
-        
-        .btn-pay { background: var(--neon); border: none; padding: 15px; width: 100%; margin: 5px 0; border-radius: 10px; font-weight: bold; }
-        .btn-main { background: none; border: 2px solid var(--neon); color: var(--neon); padding: 15px; border-radius: 50px; width: 80%; font-weight: bold; margin-top: 10px; }
+        .btn-pay { background: var(--neon); color: black; border: none; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; margin: 5px 0; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; }
     </style>
 </head>
 <body>
     <div class="glass">
-        <div style="font-size: 10px; opacity: 0.6;">VOTRE SOLDE</div>
-        <div id="userBal" style="font-size: 30px; font-weight: bold;">0.00</div>
+        <div style="font-size: 10px; opacity: 0.7; letter-spacing: 2px;">WALLET BALANCE</div>
+        <div class="balance" id="userBal">0.00</div>
     </div>
 
-    <div class="tabs">
-        <div class="tab active" id="t-slots" onclick="switchG('slots')">🎰 SLOTS</div>
-        <div class="tab" id="t-dice" onclick="switchG('dice')">🎲 DÉS</div>
+    <div class="tab-container">
+        <div class="tab active" id="btn-slots" onclick="setGame('slots')">🎰 SLOTS</div>
+        <div class="tab" id="btn-dice" onclick="setGame('dice')">🎲 DÉS</div>
     </div>
 
     <div class="glass">
-        <div id="game-view">🎰🎰🎰</div>
-        <input type="number" id="bet" style="background:none; border:1px solid #333; color:white; padding:10px; width:60%; border-radius:10px; text-align:center;" placeholder="MISE">
-        <br>
-        <button class="btn-main" onclick="playGame()">PARIER</button>
+        <div id="display">🎰🎰🎰</div>
+        <input type="number" id="bet" style="background:none; border:1px solid var(--neon); color:white; padding:12px; width:70%; border-radius:10px; text-align:center; font-size:18px;" placeholder="MISE">
+        <button onclick="play()" style="background:var(--neon); color:black; border:none; padding:15px; width:85%; border-radius:50px; font-weight:bold; margin-top:15px; box-shadow: 0 0 10px var(--neon);">JOUER</button>
     </div>
 
-    <div class="glass" style="display:flex; gap:10px;">
-        <button onclick="openModal('STARS')" style="flex:1; color:gold; border:1px solid gold; background:none; border-radius:10px; padding:10px;">STARS</button>
-        <button onclick="openModal('TON')" style="flex:1; color:var(--neon); border:1px solid var(--neon); background:none; border-radius:10px; padding:10px;">TON</button>
-        <button onclick="openModal('USDT')" style="flex:1; color:#26a17b; border:1px solid #26a17b; background:none; border-radius:10px; padding:10px;">USDT</button>
+    <div style="display:flex; gap:10px; padding: 0 15px;">
+        <button onclick="openDep('STARS')" style="flex:1; background:none; border:1px solid gold; color:gold; padding:12px; border-radius:12px;">STARS</button>
+        <button onclick="openDep('TON')" style="flex:1; background:none; border:1px solid var(--neon); color:var(--neon); padding:12px; border-radius:12px;">TON</button>
+        <button onclick="openDep('USDT')" style="flex:1; background:none; border:1px solid #26a17b; color:#26a17b; padding:12px; border-radius:12px;">USDT</button>
     </div>
 
-    <div id="depModal" class="modal">
-        <div class="modal-content">
-            <h2 id="mTitle">Dépôt</h2>
-            <input type="number" id="mAmount" style="padding:10px; width:90%; border-radius:10px; margin-bottom:15px;" placeholder="Montant">
-            <div id="pChoices">
-                <button class="btn-pay" onclick="doDep('XROCKET')">🚀 XROCKET</button>
-                <button class="btn-pay" onclick="doDep('CRYPTOBOT')">🤖 CRYPTOBOT</button>
+    <div id="modalDep" class="modal">
+        <div class="glass" style="width: 80%;">
+            <h3 id="mTitle">Dépôt</h3>
+            <input type="number" id="mAmount" style="padding:12px; width:90%; border-radius:10px; margin-bottom:15px;" placeholder="Montant">
+            <div id="cryptoChoices">
+                <button class="btn-pay" onclick="confirmDep('XROCKET')">🚀 via xRocket</button>
+                <button class="btn-pay" onclick="confirmDep('CRYPTOBOT')">🤖 via CryptoBot</button>
             </div>
-            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:15px;">Fermer</button>
+            <button class="btn-pay" id="starBtn" style="display:none;" onclick="confirmDep('TELEGRAM')">⭐ PAYER STARS</button>
+            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:15px;">ANNULER</button>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         let currentGame = 'slots';
-        let userId = tg.initDataUnsafe.user?.id || 123;
         let selectedAsset = '';
 
-        function switchG(g) {
+        function setGame(g) {
             currentGame = g;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById('t-'+g).classList.add('active');
-            document.getElementById('game-view').innerText = (g === 'dice') ? '🎲' : '🎰🎰🎰';
+            document.getElementById('btn-'+g).classList.add('active');
+            document.getElementById('display').innerText = (g === 'dice') ? '🎲' : '🎰🎰🎰';
         }
 
-        async function playGame() {
+        async function play() {
             const bet = parseFloat(document.getElementById('bet').value);
-            const view = document.getElementById('game-view');
-            if(!bet || bet <= 0) return tg.showAlert("Mise invalide");
+            const view = document.getElementById('display');
+            if(!bet || bet <= 0) return;
 
             view.classList.add('spin');
             const r = await fetch('/api/play', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: userId, bet, game: currentGame })
+                body: JSON.stringify({ id: tg.initDataUnsafe.user.id, bet, game: currentGame })
             });
             const data = await r.json();
 
             setTimeout(() => {
                 view.classList.remove('spin');
                 if(data.error) return tg.showAlert(data.error);
-                
-                if(currentGame === 'dice') {
-                    view.innerText = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][data.result];
-                } else {
-                    view.innerText = data.result.join('');
-                }
+                view.innerText = Array.isArray(data.result) ? data.result.join('') : (['','⚀','⚁','⚂','⚃','⚄','⚅'][data.result]);
                 document.getElementById('userBal').innerText = data.newBalance.toFixed(2);
                 if(data.win > 0) tg.HapticFeedback.notificationOccurred('success');
             }, 800);
         }
 
-        function openModal(asset) {
+        function openDep(asset) {
             selectedAsset = asset;
             document.getElementById('mTitle').innerText = `Dépôt ${asset}`;
-            document.getElementById('pChoices').style.display = (asset === 'STARS') ? 'none' : 'block';
-            if(asset === 'STARS') {
-                const b = document.createElement('button');
-                b.className = "btn-pay"; b.innerText = "⭐ PAYER STARS";
-                b.onclick = () => doDep('TELEGRAM'); b.id = "sBtn";
-                document.getElementById('pChoices').after(b);
-            }
-            document.getElementById('depModal').style.display = 'flex';
+            document.getElementById('cryptoChoices').style.display = (asset === 'STARS') ? 'none' : 'block';
+            document.getElementById('starBtn').style.display = (asset === 'STARS') ? 'block' : 'none';
+            document.getElementById('modalDep').style.display = 'flex';
         }
 
-        function closeModal() {
-            document.getElementById('depModal').style.display = 'none';
-            if(document.getElementById('sBtn')) document.getElementById('sBtn').remove();
-        }
+        function closeModal() { document.getElementById('modalDep').style.display = 'none'; }
 
-        async function doDep(plat) {
+        async function confirmDep(plat) {
             const amount = document.getElementById('mAmount').value;
             const r = await fetch('/api/deposit', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: userId, asset: selectedAsset, amount, platform: plat })
+                body: JSON.stringify({ id: tg.initDataUnsafe.user.id, asset: selectedAsset, amount, platform: plat })
             });
             const d = await r.json();
-            if(d.success) tg.openTelegramLink(d.url);
+            if(d.success) { tg.openTelegramLink(d.url); closeModal(); }
             else tg.showAlert(d.message);
-        }
-
-        async function withdraw() {
-            const asset = prompt("Monnaie (TON/USDT/STARS) ?").toUpperCase();
-            const amount = prompt("Montant ?");
-            const address = prompt("Adresse ou ID xRocket :");
-            if(amount && address) {
-                const r = await fetch('/api/withdraw', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: userId, name: "Joueur", asset, amount, address })
-                });
-                const res = await r.json();
-                tg.showAlert(res.message);
-            }
         }
     </script>
 </body>
