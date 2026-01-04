@@ -1,5 +1,22 @@
-<select id="assetSelect">
-    <option value="TON">TON (via CryptoBot)</option>
-    <option value="USDT">USDT (via CryptoBot)</option>
-    <option value="STARS">⭐ Étoiles Telegram</option>
-</select>
+async function startDeposit() {
+    const amount = document.getElementById('amount').value;
+    const type = document.getElementById('assetSelect').value;
+    
+    if (!amount || amount <= 0) return alert("Montant invalide");
+
+    let endpoint = (type === 'STARS') ? '/api/create-stars-invoice' : '/api/deposit-crypto';
+    let body = (type === 'STARS') ? { amount } : { amount, asset: type };
+
+    const r = await fetch(endpoint, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+    
+    const data = await r.json();
+    if (data.success) {
+        tg.openTelegramLink(data.pay_url);
+    } else {
+        alert("Erreur technique. Vérifiez BotFather.");
+    }
+}
