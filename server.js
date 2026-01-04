@@ -12,7 +12,6 @@ const CRYPTO_TOKEN = '510513:AAeEQr2dTYwFbaX56NPAgZluhSt34zua2fc';
 const XROCKET_TOKEN = 'a539c0bd75bc3aec4f0e7f753'; 
 const ADMIN_ID = '7019851823'; 
 
-// --- BASE DE DONNÉES SÉCURISÉE ---
 const DB_FILE = './database.json';
 let db = {};
 if (fs.existsSync(DB_FILE)) { 
@@ -20,19 +19,18 @@ if (fs.existsSync(DB_FILE)) {
 }
 const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-// --- LIMITES STRICTES ---
+// --- NOUVEAUX MONTANTS RECTIFIÉS ---
 const LIMITS = {
-    DEP: { STARS: 5, TON: 0.2, USDT: 0.4 },
-    WIT: { TON: 0.7, USDT: 1 } // Retrait STARS supprimé ici
+    DEP: { STARS: 5, TON: 0.05, USDT: 0.1 },
+    WIT: { TON: 0.2, USDT: 0.5 } // Retrait STARS supprimé
 };
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// --- CHARGEMENT DU PROFIL ---
 app.post('/api/user-data', (req, res) => {
     const { id } = req.body;
     if (!db[id]) { 
-        db[id] = { balance: 0.00, level: 1, xp: 0 }; 
+        db[id] = { balance: 0.00, level: 1, xp: 0, history: [] }; 
         saveDB(); 
     }
     res.json(db[id]);
@@ -44,53 +42,55 @@ app.post('/api/deposit', async (req, res) => {
     if (amount < LIMITS.DEP[asset]) return res.json({ success: false, message: `Min: ${LIMITS.DEP[asset]} ${asset}` });
 
     try {
+        let payUrl = "";
         if (asset === 'STARS') {
             const r = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
                 title: "Dépôt Stars", description: "Crédits Casino", payload: `dep_${id}`,
                 provider_token: "", currency: "XTR", prices: [{ label: "Stars", amount: parseInt(amount) }]
             });
-            return res.json({ success: true, url: r.data.result });
-        }
-        
-        if (platform === 'XROCKET') {
+            payUrl = r.data.result;
+        } else if (platform === 'XROCKET') {
             const r = await axios.post('https://pay.ton-rocket.com/tg-invoices', {
                 amount: parseFloat(amount), currency: asset.toUpperCase(), description: `Depot ID ${id}`
             }, { headers: { 'Rocket-Pay-API-Token': XROCKET_TOKEN, 'Content-Type': 'application/json' } });
-            return res.json({ success: true, url: r.data.result.link });
+            payUrl = r.data.result.link;
         } else {
             const r = await axios.post('https://pay.crypt.bot/api/createInvoice', {
                 asset: asset.toUpperCase(), amount: amount.toString(), payload: id.toString()
             }, { headers: { 'Crypto-Pay-API-Token': CRYPTO_TOKEN } });
-            return res.json({ success: true, url: r.data.result.pay_url });
+            payUrl = r.data.result.pay_url;
         }
-    } catch (e) { res.json({ success: false, message: "Erreur API de paiement." }); }
+
+        if (!db[id].history) db[id].history = [];
+        db[id].history.unshift({ type: 'Dépôt', amount, asset, status: '⏳', date: new Date().toLocaleDateString() });
+        db[id].history = db[id].history.slice(0, 5);
+        saveDB();
+
+        return res.json({ success: true, url: payUrl });
+    } catch (e) { res.json({ success: false, message: "Erreur API Paiement." }); }
 });
 
-// --- RETRAITS (TON & USDT UNIQUEMENT) ---
+// --- RETRAITS (CRYPTO UNIQUEMENT) ---
 app.post('/api/withdraw', async (req, res) => {
     const { id, name, amount, asset, address, platform } = req.body;
     
-    if (asset === 'STARS') return res.json({ success: false, message: "Retrait Étoiles indisponible." });
+    if (asset === 'STARS') return res.json({ success: false, message: "Retrait Étoiles non autorisé." });
     if (!db[id] || db[id].balance < amount) return res.json({ success: false, message: "Solde insuffisant." });
     if (amount < LIMITS.WIT[asset]) return res.json({ success: false, message: `Min retrait: ${LIMITS.WIT[asset]} ${asset}` });
 
     db[id].balance -= amount;
+    if (!db[id].history) db[id].history = [];
+    db[id].history.unshift({ type: 'Retrait', amount, asset, status: '✅', date: new Date().toLocaleDateString() });
+    db[id].history = db[id].history.slice(0, 5);
     saveDB();
 
-    const adminMsg = `🏦 *DEMANDE DE RETRAIT CRYPTO*\n` +
-                     `━━━━━━━━━━━━━━━\n` +
-                     `👤 Joueur: ${name} (ID: ${id})\n` +
-                     `💰 Montant: ${amount} ${asset}\n` +
-                     `🔌 Via: ${platform}\n` +
-                     `📍 Adresse: \`${address}\`\n` +
-                     `━━━━━━━━━━━━━━━\n\n` +
-                     `_Veuillez envoyer le chèque via ${platform}._`;
-
+    const adminMsg = `🏦 *DEMANDE DE RETRAIT*\n━━━━━━━━━━━━━━━\n👤 Joueur: ${name} (ID: ${id})\n💰 Montant: ${amount} ${asset}\n📍 Adresse: \`${address}\`\n🔌 Via: ${platform}`;
     await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: ADMIN_ID, text: adminMsg, parse_mode: 'Markdown' });
-    res.json({ success: true, message: "Demande envoyée ! L'admin vous enverra un chèque." });
+    
+    res.json({ success: true, message: "Facture envoyée à l'administrateur !" });
 });
 
-// --- LOGIQUE DE JEU ---
+// --- JEUX ---
 app.post('/api/play', (req, res) => {
     const { id, bet, game } = req.body;
     if (!db[id] || db[id].balance < bet || bet <= 0) return res.status(400).json({ error: "Solde insuffisant." });
@@ -107,13 +107,10 @@ app.post('/api/play', (req, res) => {
         else if (result[0] === result[1]) win = bet * 2;
     }
     db[id].balance += win;
-    
-    // XP & NIVEAU
     db[id].xp += 5;
     if(db[id].xp >= (db[id].level * 50)) { db[id].level++; db[id].xp = 0; }
-    
     saveDB();
-    res.json({ result, win, newBalance: db[id].balance, level: db[id].level });
+    res.json({ result, win, newBalance: db[id].balance, level: db[id].level, xp: db[id].xp, history: db[id].history });
 });
 
 app.listen(process.env.PORT || 3000);
