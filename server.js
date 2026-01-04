@@ -12,31 +12,27 @@ const CRYPTO_TOKEN = '510513:AAeEQr2dTYwFbaX56NPAgZluhSt34zua2fc';
 const XROCKET_TOKEN = 'a539c0bd75bc3aec4f0e7f753'; 
 const ADMIN_ID = '7019851823'; 
 
+// --- BASE DE DONNÉES ---
 const DB_FILE = './database.json';
 let db = {};
-if (fs.existsSync(DB_FILE)) { 
-    try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (e) { db = {}; } 
-}
+if (fs.existsSync(DB_FILE)) { try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (e) { db = {}; } }
 const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-// --- NOUVEAUX MONTANTS RECTIFIÉS ---
+// --- LIMITES RECTIFIÉES (TON 0.05 / USDT 0.1) ---
 const LIMITS = {
     DEP: { STARS: 5, TON: 0.05, USDT: 0.1 },
-    WIT: { TON: 0.2, USDT: 0.5 } // Retrait STARS supprimé
+    WIT: { TON: 0.2, USDT: 0.5 }
 };
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 app.post('/api/user-data', (req, res) => {
     const { id } = req.body;
-    if (!db[id]) { 
-        db[id] = { balance: 0.00, level: 1, xp: 0, history: [] }; 
-        saveDB(); 
-    }
+    if (!db[id]) { db[id] = { balance: 0.00, level: 1, xp: 0, history: [] }; saveDB(); }
     res.json(db[id]);
 });
 
-// --- DÉPÔTS ---
+// --- CRÉATION DE DÉPÔT ---
 app.post('/api/deposit', async (req, res) => {
     const { id, asset, amount, platform } = req.body;
     if (amount < LIMITS.DEP[asset]) return res.json({ success: false, message: `Min: ${LIMITS.DEP[asset]} ${asset}` });
@@ -45,14 +41,15 @@ app.post('/api/deposit', async (req, res) => {
         let payUrl = "";
         if (asset === 'STARS') {
             const r = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
-                title: "Dépôt Stars", description: "Crédits Casino", payload: `dep_${id}`,
+                title: "Dépôt Stars", description: "Crédits Casino", payload: id.toString(),
                 provider_token: "", currency: "XTR", prices: [{ label: "Stars", amount: parseInt(amount) }]
             });
             payUrl = r.data.result;
         } else if (platform === 'XROCKET') {
             const r = await axios.post('https://pay.ton-rocket.com/tg-invoices', {
-                amount: parseFloat(amount), currency: asset.toUpperCase(), description: `Depot ID ${id}`
-            }, { headers: { 'Rocket-Pay-API-Token': XROCKET_TOKEN, 'Content-Type': 'application/json' } });
+                amount: parseFloat(amount), currency: asset.toUpperCase(), description: `Depot ID ${id}`,
+                callback_url: `https://${req.get('host')}/webhook/xrocket`
+            }, { headers: { 'Rocket-Pay-API-Token': XROCKET_TOKEN } });
             payUrl = r.data.result.link;
         } else {
             const r = await axios.post('https://pay.crypt.bot/api/createInvoice', {
@@ -60,34 +57,52 @@ app.post('/api/deposit', async (req, res) => {
             }, { headers: { 'Crypto-Pay-API-Token': CRYPTO_TOKEN } });
             payUrl = r.data.result.pay_url;
         }
-
-        if (!db[id].history) db[id].history = [];
-        db[id].history.unshift({ type: 'Dépôt', amount, asset, status: '⏳', date: new Date().toLocaleDateString() });
-        db[id].history = db[id].history.slice(0, 5);
-        saveDB();
-
-        return res.json({ success: true, url: payUrl });
+        res.json({ success: true, url: payUrl });
     } catch (e) { res.json({ success: false, message: "Erreur API Paiement." }); }
 });
 
-// --- RETRAITS (CRYPTO UNIQUEMENT) ---
+// --- WEBHOOK CRYPTOBOT ---
+app.post('/webhook/cryptopay', (req, res) => {
+    const { payload, asset, amount, status } = req.body.update_item || {};
+    if (status === 'paid' && payload) {
+        const uid = payload;
+        if (db[uid]) {
+            db[uid].balance += parseFloat(amount);
+            db[uid].history.unshift({ type: 'Dépôt ✅', amount, asset, date: 'Auto' });
+            saveDB();
+        }
+    }
+    res.sendStatus(200);
+});
+
+// --- WEBHOOK XROCKET ---
+app.post('/webhook/xrocket', (req, res) => {
+    const data = req.body;
+    if (data.status === 'paid' && data.description.includes('Depot ID')) {
+        const uid = data.description.split('ID ')[1];
+        if (db[uid]) {
+            db[uid].balance += parseFloat(data.amount);
+            db[uid].history.unshift({ type: 'Dépôt ✅', amount: data.amount, asset: data.currency, date: 'Auto' });
+            saveDB();
+        }
+    }
+    res.sendStatus(200);
+});
+
+// --- RETRAITS ---
 app.post('/api/withdraw', async (req, res) => {
     const { id, name, amount, asset, address, platform } = req.body;
-    
-    if (asset === 'STARS') return res.json({ success: false, message: "Retrait Étoiles non autorisé." });
+    if (asset === 'STARS') return res.json({ success: false, message: "Retrait STARS indisponible." });
     if (!db[id] || db[id].balance < amount) return res.json({ success: false, message: "Solde insuffisant." });
-    if (amount < LIMITS.WIT[asset]) return res.json({ success: false, message: `Min retrait: ${LIMITS.WIT[asset]} ${asset}` });
+    if (amount < LIMITS.WIT[asset]) return res.json({ success: false, message: `Min: ${LIMITS.WIT[asset]} ${asset}` });
 
     db[id].balance -= amount;
-    if (!db[id].history) db[id].history = [];
-    db[id].history.unshift({ type: 'Retrait', amount, asset, status: '✅', date: new Date().toLocaleDateString() });
-    db[id].history = db[id].history.slice(0, 5);
+    db[id].history.unshift({ type: 'Retrait ⏳', amount, asset, date: new Date().toLocaleDateString() });
     saveDB();
 
-    const adminMsg = `🏦 *DEMANDE DE RETRAIT*\n━━━━━━━━━━━━━━━\n👤 Joueur: ${name} (ID: ${id})\n💰 Montant: ${amount} ${asset}\n📍 Adresse: \`${address}\`\n🔌 Via: ${platform}`;
-    await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: ADMIN_ID, text: adminMsg, parse_mode: 'Markdown' });
-    
-    res.json({ success: true, message: "Facture envoyée à l'administrateur !" });
+    const msg = `🏦 *NOUVEAU RETRAIT*\n👤: ${name} (ID: ${id})\n💰: ${amount} ${asset}\n📍: \`${address}\`\n🔌: ${platform}`;
+    axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: ADMIN_ID, text: msg, parse_mode: 'Markdown' });
+    res.json({ success: true, message: "Demande envoyée à l'admin !" });
 });
 
 // --- JEUX ---
