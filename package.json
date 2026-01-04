@@ -1,7 +1,7 @@
 {
-  "name": "newspin-casino",
-  "version": "2.0.0",
-  "description": "Casino Bot Pro",
+  "name": "newspin-casino-pro",
+  "version": "2.5.0",
+  "description": "Casino Futuriste avec Retraits et Dépôts",
   "main": "server.js",
   "scripts": { "start": "node server.js" },
   "dependencies": {
