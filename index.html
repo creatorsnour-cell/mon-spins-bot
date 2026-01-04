@@ -16,17 +16,22 @@
         .anim-spin { animation: spin 0.1s infinite linear; }
         @keyframes spin { from {transform: rotateX(0deg)} to {transform: rotateX(360deg)} }
         .btn-main { background: var(--neon); color: black; border: none; padding: 18px; width: 85%; border-radius: 50px; font-weight: bold; box-shadow: 0 0 15px var(--neon); cursor: pointer; }
-        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:100; justify-content:center; align-items:center; }
         .footer-btns { display: flex; gap: 8px; padding: 15px; }
         .btn-action { flex: 1; background: none; padding: 12px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer; }
-        input { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 80%; border-radius: 15px; text-align: center; outline: none; margin-bottom: 10px; }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:100; justify-content:center; align-items:center; }
+        input, select { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 80%; border-radius: 15px; text-align: center; outline: none; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div class="glass">
-        <div id="lvl" style="font-size: 10px; opacity: 0.6; letter-spacing: 1px;">CHARGEMENT NIVEAU...</div>
+        <div id="lvl" style="font-size: 10px; opacity: 0.6;">CHARGEMENT...</div>
         <div class="balance" id="userBal">0.00</div>
+    </div>
+
+    <div id="history-box" style="margin: 0 15px; font-size: 10px; text-align: left; background: rgba(255,255,255,0.03); border-radius: 15px; padding: 10px; display: none;">
+        <div style="opacity: 0.5; margin-bottom: 5px; font-weight: bold;">ACTIVITÉS RÉCENTES :</div>
+        <div id="hist-list"></div>
     </div>
 
     <div class="tabs">
@@ -38,32 +43,30 @@
         <div id="game-display">🎰🎰🎰</div>
         <input type="number" id="bet" placeholder="MISE">
         <br>
-        <button class="btn-main" onclick="play()">LANCER LE PARI</button>
+        <button class="btn-main" onclick="play()">JOUER</button>
     </div>
 
     <div class="footer-btns">
         <button onclick="openMenu('DEP', 'STARS')" class="btn-action" style="border:1px solid gold; color:gold;">DÉPÔT ⭐</button>
         <button onclick="openMenu('DEP', 'TON')" class="btn-action" style="border:1px solid var(--neon); color:var(--neon);">DÉPÔT CRYPTO</button>
-        <button onclick="openMenu('WIT', 'TON')" class="btn-action" style="border:1px solid #ff4444; color:#ff4444;">RETRAIT CRYPTO</button>
+        <button onclick="openMenu('WIT', 'TON')" class="btn-action" style="border:1px solid #ff4444; color:#ff4444;">RETRAIT</button>
     </div>
 
     <div id="modal" class="modal">
         <div class="glass" style="width: 85%;">
             <h2 id="mTitle" style="color:var(--neon)">-</h2>
             <p id="mLimit" style="font-size: 11px; opacity:0.5; margin-bottom:15px;"></p>
-            
             <input type="number" id="mAmount" placeholder="Montant">
-            <select id="assetSelect" style="display:none; width:88%; padding:15px; border-radius:15px; background:#111; color:white; border:1px solid var(--neon); margin-bottom:10px;">
+            <select id="assetSelect" style="display:none; width:88%;">
                 <option value="TON">TON Coin</option>
                 <option value="USDT">USDT (Tether)</option>
             </select>
-
-            <div id="mChoices" style="margin-top:10px;">
-                <button onclick="exec('XROCKET')" style="width:100%; padding:15px; border-radius:12px; margin-bottom:8px; background:#222; color:white; border:1px solid #444;">🚀 via xRocket</button>
-                <button onclick="exec('CRYPTOBOT')" style="width:100%; padding:15px; border-radius:12px; margin-bottom:8px; background:#222; color:white; border:1px solid #444;">🤖 via CryptoBot</button>
-                <button id="starBtn" onclick="exec('TELEGRAM')" style="display:none; width:100%; padding:15px; border-radius:12px; color:gold; background:#222; border:1px solid gold;">⭐ Telegram Stars</button>
+            <div id="mChoices">
+                <button onclick="exec('XROCKET')" style="width:100%; padding:15px; border-radius:12px; margin-bottom:8px; background:#222; color:white;">🚀 xRocket</button>
+                <button onclick="exec('CRYPTOBOT')" style="width:100%; padding:15px; border-radius:12px; margin-bottom:8px; background:#222; color:white;">🤖 CryptoBot</button>
+                <button id="starBtn" onclick="exec('TELEGRAM')" style="display:none; width:100%; padding:15px; border-radius:12px; color:gold; background:#222;">⭐ Telegram Stars</button>
             </div>
-            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:15px; opacity:0.6;">ANNULER</button>
+            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:10px;">FERMER</button>
         </div>
     </div>
 
@@ -71,14 +74,28 @@
         const tg = window.Telegram.WebApp;
         let userId = tg.initDataUnsafe.user?.id || 0, userName = tg.initDataUnsafe.user?.first_name || "Joueur";
         let curGame = 'slots', curMode = 'DEP', curAsset = 'TON';
-        const LIMS = { DEP:{STARS:5, TON:0.2, USDT:0.4}, WIT:{TON:0.7, USDT:1} };
+        const LIMS = { DEP:{STARS:5, TON:0.05, USDT:0.1}, WIT:{TON:0.2, USDT:0.5} };
 
         window.onload = async () => {
             const r = await fetch('/api/user-data', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id:userId}) });
             const d = await r.json();
+            updateUI(d);
+        };
+
+        function updateUI(d) {
             document.getElementById('userBal').innerText = d.balance.toFixed(2);
             document.getElementById('lvl').innerText = `NIVEAU ${d.level} • XP ${d.xp}`;
-        };
+            if (d.history && d.history.length > 0) {
+                document.getElementById('history-box').style.display = 'block';
+                document.getElementById('hist-list').innerHTML = d.history.map(h => 
+                    `<div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <span>${h.status} ${h.type}</span>
+                        <span style="color:var(--neon)">${h.amount} ${h.asset}</span>
+                        <span style="opacity:0.4">${h.date}</span>
+                    </div>`
+                ).join('');
+            }
+        }
 
         function changeGame(g, el) {
             curGame = g;
@@ -98,20 +115,17 @@
                 view.classList.remove('anim-spin');
                 if(d.error) return tg.showAlert(d.error);
                 view.innerText = curGame === 'dice' ? ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][d.result] : d.result.join('');
-                document.getElementById('userBal').innerText = d.newBalance.toFixed(2);
-                document.getElementById('lvl').innerText = `NIVEAU ${d.level} • XP ${d.xp}`;
+                updateUI(d);
             }, 800);
         }
 
         function openMenu(mode, asset) {
             curMode = mode; curAsset = asset;
             document.getElementById('mTitle').innerText = (mode === 'DEP') ? `Dépôt ${asset}` : "Retrait Crypto";
-            document.getElementById('mLimit').innerText = `Minimum requis: ${LIMS[mode][asset] || '0.70'} ${asset}`;
+            document.getElementById('mLimit').innerText = `Minimum: ${LIMS[mode][asset] || '0.20'} ${asset}`;
             document.getElementById('assetSelect').style.display = (mode === 'WIT') ? 'block' : 'none';
             document.getElementById('starBtn').style.display = (asset === 'STARS' && mode === 'DEP') ? 'block' : 'none';
-            
-            const crypBtns = (asset === 'STARS' && mode === 'DEP') ? 'none' : 'block';
-            document.querySelectorAll('#mChoices button:not(#starBtn)').forEach(b => b.style.display = crypBtns);
+            document.querySelectorAll('#mChoices button:not(#starBtn)').forEach(b => b.style.display = (asset === 'STARS' && mode === 'DEP') ? 'none' : 'block');
             document.getElementById('modal').style.display = 'flex';
         }
 
@@ -120,15 +134,12 @@
         async function exec(plat) {
             const amt = parseFloat(document.getElementById('mAmount').value);
             const asset = (curMode === 'WIT') ? document.getElementById('assetSelect').value : curAsset;
-            
-            if(!amt || amt < LIMS[curMode][asset]) return tg.showAlert(`Montant insuffisant. Min: ${LIMS[curMode][asset]} ${asset}`);
-            
+            if(!amt || amt < LIMS[curMode][asset]) return tg.showAlert(`Min: ${LIMS[curMode][asset]} ${asset}`);
             let addr = "";
             if(curMode === 'WIT') {
-                addr = prompt(`Entrez votre adresse ${asset} ou votre ID ${plat} :`);
+                addr = prompt(`Adresse ${asset} ou ID ${plat} :`);
                 if(!addr) return;
             }
-
             const r = await fetch(curMode == 'DEP' ? '/api/deposit' : '/api/withdraw', {
                 method: 'POST', headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({id:userId, name:userName, asset:asset, amount:amt, platform:plat, address:addr})
@@ -138,6 +149,7 @@
                 if(curMode == 'DEP') tg.openTelegramLink(d.url);
                 else tg.showAlert(d.message);
                 closeModal();
+                location.reload(); // Recharge pour l'historique
             } else tg.showAlert(d.message);
         }
     </script>
