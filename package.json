@@ -1,7 +1,7 @@
 {
   "name": "newspin-bot",
   "version": "1.0.0",
-  "description": "Bot de paris",
+  "description": "Bot de paris Newspin",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
