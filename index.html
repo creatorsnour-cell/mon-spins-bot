@@ -9,24 +9,15 @@
         body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; overflow-x: hidden; }
         .glass { background: var(--card); border: 1px solid rgba(0,242,255,0.2); border-radius: 25px; padding: 20px; margin: 15px; backdrop-filter: blur(10px); }
         .balance { font-size: 38px; color: var(--neon); text-shadow: 0 0 15px var(--neon); font-weight: bold; }
-        
-        /* Menu Jeux */
         .tabs { display: flex; justify-content: center; gap: 10px; margin: 15px; }
         .tab { padding: 12px 25px; border: 1px solid var(--neon); border-radius: 15px; opacity: 0.4; cursor: pointer; font-size: 14px; transition: 0.3s; }
         .tab.active { opacity: 1; background: var(--neon); color: black; box-shadow: 0 0 20px var(--neon); }
-
-        /* Animation Zone */
         #game-display { font-size: 80px; min-height: 120px; margin: 25px 0; display: flex; align-items: center; justify-content: center; }
         .anim-spin { animation: spin 0.1s infinite linear; }
         @keyframes spin { from {transform: rotateX(0deg)} to {transform: rotateX(360deg)} }
-
         .btn-main { background: var(--neon); color: black; border: none; padding: 18px; width: 85%; border-radius: 50px; font-weight: bold; font-size: 18px; cursor: pointer; box-shadow: 0 0 15px var(--neon); }
-        
-        /* Modal Système */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; }
-        .modal-content { width: 85%; }
         .btn-choice { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 100%; border-radius: 15px; margin: 8px 0; font-weight: bold; font-size: 14px; }
-        
         input { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 80%; border-radius: 15px; text-align: center; font-size: 18px; outline: none; }
         .footer-btns { display: flex; gap: 10px; padding: 0 15px; margin-top: 10px; }
         .btn-action { flex: 1; background: none; padding: 12px; border-radius: 12px; font-weight: bold; font-size: 11px; cursor: pointer; }
@@ -35,7 +26,7 @@
 <body>
 
     <div class="glass">
-        <div style="font-size: 10px; letter-spacing: 2px; opacity: 0.7;">TOTAL CREDITS</div>
+        <div id="levelDisplay" style="font-size: 10px; opacity: 0.6;">NIVEAU 1</div>
         <div class="balance" id="userBal">0.00</div>
     </div>
 
@@ -58,19 +49,16 @@
     </div>
 
     <div id="systemModal" class="modal">
-        <div class="glass modal-content">
-            <h2 id="modalTitle" style="color:var(--neon); margin-top:0;">Dépôt</h2>
+        <div class="glass" style="width:85%">
+            <h2 id="modalTitle" style="color:var(--neon)">Dépôt</h2>
             <p id="modalLimit" style="font-size: 12px; opacity: 0.6;"></p>
-            
             <input type="number" id="systemAmount" placeholder="Montant">
-            
             <div id="platformChoices" style="margin-top: 20px;">
                 <button class="btn-choice" id="btn-xrocket" onclick="executeAction('XROCKET')">🚀 via xRocket</button>
                 <button class="btn-choice" id="btn-cryptobot" onclick="executeAction('CRYPTOBOT')">🤖 via CryptoBot</button>
                 <button class="btn-choice" id="btn-stars" style="display:none; color:gold;" onclick="executeAction('TELEGRAM')">⭐ via Telegram Stars</button>
             </div>
-            
-            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:20px; opacity:0.5;">ANNULER</button>
+            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:20px;">ANNULER</button>
         </div>
     </div>
 
@@ -78,16 +66,21 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        let userId = tg.initDataUnsafe.user?.id || 0;
+        let userId = tg.initDataUnsafe.user?.id || 12345;
         let userName = tg.initDataUnsafe.user?.first_name || "Joueur";
-        
-        let currentGame = 'slots';
-        let currentMode = 'DEP'; // DEP ou WIT
-        let currentAsset = 'TON';
+        let currentGame = 'slots', currentMode = 'DEP', currentAsset = 'TON';
 
-        const LIMITS = {
-            DEP: { STARS: 5, TON: 0.2, USDT: 0.4 },
-            WIT: { STARS: 15, TON: 0.7, USDT: 1 }
+        const LIMITS = { DEP: { STARS: 5, TON: 0.2, USDT: 0.4 }, WIT: { STARS: 15, TON: 0.7, USDT: 1 } };
+
+        // --- CHARGEMENT AUTO DES DONNÉES ---
+        window.onload = async () => {
+            const r = await fetch('/api/user-data', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: userId })
+            });
+            const data = await r.json();
+            document.getElementById('userBal').innerText = data.balance.toFixed(2);
+            document.getElementById('levelDisplay').innerText = `NIVEAU ${data.level}`;
         };
 
         function changeGame(type) {
@@ -97,118 +90,59 @@
             document.getElementById('game-display').innerText = (type === 'dice') ? '🎲' : '🎰🎰🎰';
         }
 
-        // --- SYSTÈME DE JEU ---
         async function play() {
             const bet = parseFloat(document.getElementById('bet').value);
             const display = document.getElementById('game-display');
-            if(!bet || bet <= 0) return tg.showAlert("Entrez une mise valide.");
+            if(!bet || bet <= 0) return;
 
             display.classList.add('anim-spin');
-            
-            try {
-                const r = await fetch('/api/play', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: userId, bet: bet, game: currentGame })
-                });
-                const data = await r.json();
+            const r = await fetch('/api/play', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: userId, bet, game: currentGame })
+            });
+            const data = await r.json();
 
-                setTimeout(() => {
-                    display.classList.remove('anim-spin');
-                    if(data.error) return tg.showAlert(data.error);
-                    
-                    if(currentGame === 'dice') {
-                        const dice = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-                        display.innerText = dice[data.result];
-                    } else {
-                        display.innerText = data.result.join('');
-                    }
-                    
-                    document.getElementById('userBal').innerText = data.newBalance.toFixed(2);
-                    if(data.win > 0) {
-                        tg.HapticFeedback.notificationOccurred('success');
-                    }
-                }, 800);
-            } catch(e) {
+            setTimeout(() => {
                 display.classList.remove('anim-spin');
-                tg.showAlert("Erreur de connexion au jeu.");
-            }
+                if(data.error) return tg.showAlert(data.error);
+                display.innerText = (currentGame === 'dice') ? ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][data.result] : data.result.join('');
+                document.getElementById('userBal').innerText = data.newBalance.toFixed(2);
+                document.getElementById('levelDisplay').innerText = `NIVEAU ${data.level}`;
+            }, 800);
         }
 
-        // --- SYSTÈME FINANCIER ---
         function openSystem(mode, asset) {
-            currentMode = mode;
-            currentAsset = asset;
-            
-            const title = mode === 'DEP' ? "Dépôt" : "Retrait";
-            const limit = LIMITS[mode][asset];
-            
-            document.getElementById('modalTitle').innerText = `${title} ${asset}`;
-            document.getElementById('modalLimit').innerText = `Minimum requis: ${limit} ${asset}`;
+            currentMode = mode; currentAsset = asset;
+            document.getElementById('modalTitle').innerText = `${mode === 'DEP' ? "Dépôt" : "Retrait"} ${asset}`;
+            document.getElementById('modalLimit').innerText = `Min: ${LIMITS[mode][asset]} ${asset}`;
             document.getElementById('systemModal').style.display = 'flex';
-
-            // Gérer l'affichage des boutons
-            if (asset === 'STARS' && mode === 'DEP') {
-                document.getElementById('btn-xrocket').style.display = 'none';
-                document.getElementById('btn-cryptobot').style.display = 'none';
-                document.getElementById('btn-stars').style.display = 'block';
-            } else {
-                document.getElementById('btn-xrocket').style.display = 'block';
-                document.getElementById('btn-cryptobot').style.display = 'block';
-                document.getElementById('btn-stars').style.display = 'none';
-            }
+            document.getElementById('btn-stars').style.display = (asset === 'STARS' && mode === 'DEP') ? 'block' : 'none';
+            document.getElementById('btn-xrocket').style.display = (asset === 'STARS' && mode === 'DEP') ? 'none' : 'block';
+            document.getElementById('btn-cryptobot').style.display = (asset === 'STARS' && mode === 'DEP') ? 'none' : 'block';
         }
 
-        function closeModal() {
-            document.getElementById('systemModal').style.display = 'none';
-            document.getElementById('systemAmount').value = '';
-        }
+        function closeModal() { document.getElementById('systemModal').style.display = 'none'; }
 
         async function executeAction(platform) {
             const amount = parseFloat(document.getElementById('systemAmount').value);
-            const min = LIMITS[currentMode][currentAsset];
-
-            if(!amount || amount < min) {
-                return tg.showAlert(`Le montant minimum est de ${min} ${currentAsset}`);
-            }
+            if(!amount || amount < LIMITS[currentMode][currentAsset]) return tg.showAlert("Montant invalide");
 
             let address = "";
             if(currentMode === 'WIT') {
-                address = prompt(`Entrez votre adresse ${currentAsset} (ou ID pour ${platform}) :`);
+                address = prompt(`Adresse ${currentAsset} :`);
                 if(!address) return;
             }
 
-            const endpoint = currentMode === 'DEP' ? '/api/deposit' : '/api/withdraw';
-            
-            try {
-                const r = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        id: userId,
-                        name: userName,
-                        asset: currentAsset,
-                        amount: amount,
-                        platform: platform,
-                        address: address
-                    })
-                });
-                
-                const data = await r.json();
-                
-                if(data.success) {
-                    if(currentMode === 'DEP') {
-                        tg.openTelegramLink(data.url);
-                    } else {
-                        tg.showAlert(data.message);
-                    }
-                    closeModal();
-                } else {
-                    tg.showAlert(data.message || "Une erreur est survenue.");
-                }
-            } catch(e) {
-                tg.showAlert("Erreur de communication avec le serveur.");
-            }
+            const r = await fetch(currentMode === 'DEP' ? '/api/deposit' : '/api/withdraw', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: userId, name: userName, asset: currentAsset, amount, platform, address })
+            });
+            const data = await r.json();
+            if(data.success) {
+                if(currentMode === 'DEP') tg.openTelegramLink(data.url);
+                else tg.showAlert(data.message);
+                closeModal();
+            } else tg.showAlert(data.message);
         }
     </script>
 </body>
