@@ -6,143 +6,128 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --neon: #00f2ff; --bg: #010409; --card: rgba(0, 242, 255, 0.05); }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; overflow-x: hidden; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; text-align: center; }
         .glass { background: var(--card); border: 1px solid rgba(0,242,255,0.2); border-radius: 25px; padding: 20px; margin: 15px; backdrop-filter: blur(10px); }
         .balance { font-size: 38px; color: var(--neon); text-shadow: 0 0 15px var(--neon); font-weight: bold; }
         .tabs { display: flex; justify-content: center; gap: 10px; margin: 15px; }
-        .tab { padding: 12px 25px; border: 1px solid var(--neon); border-radius: 15px; opacity: 0.4; cursor: pointer; font-size: 14px; transition: 0.3s; }
+        .tab { padding: 12px 25px; border: 1px solid var(--neon); border-radius: 15px; opacity: 0.4; cursor: pointer; }
         .tab.active { opacity: 1; background: var(--neon); color: black; box-shadow: 0 0 20px var(--neon); }
         #game-display { font-size: 80px; min-height: 120px; margin: 25px 0; display: flex; align-items: center; justify-content: center; }
         .anim-spin { animation: spin 0.1s infinite linear; }
         @keyframes spin { from {transform: rotateX(0deg)} to {transform: rotateX(360deg)} }
-        .btn-main { background: var(--neon); color: black; border: none; padding: 18px; width: 85%; border-radius: 50px; font-weight: bold; font-size: 18px; cursor: pointer; box-shadow: 0 0 15px var(--neon); }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; }
-        .btn-choice { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 100%; border-radius: 15px; margin: 8px 0; font-weight: bold; font-size: 14px; }
-        input { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 80%; border-radius: 15px; text-align: center; font-size: 18px; outline: none; }
-        .footer-btns { display: flex; gap: 10px; padding: 0 15px; margin-top: 10px; }
-        .btn-action { flex: 1; background: none; padding: 12px; border-radius: 12px; font-weight: bold; font-size: 11px; cursor: pointer; }
+        .btn-main { background: var(--neon); color: black; border: none; padding: 18px; width: 85%; border-radius: 50px; font-weight: bold; box-shadow: 0 0 15px var(--neon); }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; }
+        .footer-btns { display: flex; gap: 8px; padding: 15px; }
+        .btn-action { flex: 1; background: none; padding: 12px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        input { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 80%; border-radius: 15px; text-align: center; }
     </style>
 </head>
 <body>
 
     <div class="glass">
-        <div id="levelDisplay" style="font-size: 10px; opacity: 0.6;">NIVEAU 1</div>
+        <div id="lvl" style="font-size: 10px; opacity: 0.6;">NIVEAU 1</div>
         <div class="balance" id="userBal">0.00</div>
     </div>
 
     <div class="tabs">
-        <div class="tab active" id="tab-slots" onclick="changeGame('slots')">🎰 CASINO</div>
-        <div class="tab" id="tab-dice" onclick="changeGame('dice')">🎲 DÉS</div>
+        <div class="tab active" onclick="changeGame('slots', this)">🎰 SLOTS</div>
+        <div class="tab" onclick="changeGame('dice', this)">🎲 DÉS</div>
     </div>
 
     <div class="glass">
         <div id="game-display">🎰🎰🎰</div>
         <input type="number" id="bet" placeholder="MISE">
         <br><br>
-        <button class="btn-main" onclick="play()">LANCER LE PARI</button>
+        <button class="btn-main" onclick="play()">JOUER</button>
     </div>
 
     <div class="footer-btns">
-        <button onclick="openSystem('DEP', 'STARS')" class="btn-action" style="border:1px solid gold; color:gold;">DÉPÔT ⭐</button>
-        <button onclick="openSystem('DEP', 'TON')" class="btn-action" style="border:1px solid var(--neon); color:var(--neon);">DÉPÔT CRYPTO</button>
-        <button onclick="openSystem('WIT', 'STARS')" class="btn-action" style="border:1px solid #ff4444; color:#ff4444;">RETRAIT</button>
+        <button onclick="openMenu('DEP', 'STARS')" class="btn-action" style="border:1px solid gold; color:gold;">DÉPÔT STARS</button>
+        <button onclick="openMenu('DEP', 'TON')" class="btn-action" style="border:1px solid var(--neon); color:var(--neon);">DÉPÔT CRYPTO</button>
+        <button onclick="openMenu('WIT', 'STARS')" class="btn-action" style="border:1px solid #ff4444; color:#ff4444;">RETRAIT</button>
     </div>
 
-    <div id="systemModal" class="modal">
-        <div class="glass" style="width:85%">
-            <h2 id="modalTitle" style="color:var(--neon)">Dépôt</h2>
-            <p id="modalLimit" style="font-size: 12px; opacity: 0.6;"></p>
-            <input type="number" id="systemAmount" placeholder="Montant">
-            <div id="platformChoices" style="margin-top: 20px;">
-                <button class="btn-choice" id="btn-xrocket" onclick="executeAction('XROCKET')">🚀 via xRocket</button>
-                <button class="btn-choice" id="btn-cryptobot" onclick="executeAction('CRYPTOBOT')">🤖 via CryptoBot</button>
-                <button class="btn-choice" id="btn-stars" style="display:none; color:gold;" onclick="executeAction('TELEGRAM')">⭐ via Telegram Stars</button>
+    <div id="modal" class="modal">
+        <div class="glass" style="width: 85%;">
+            <h2 id="mTitle" style="color:var(--neon)">-</h2>
+            <input type="number" id="mAmount" placeholder="Montant">
+            <div id="mChoices" style="margin-top:20px;">
+                <button onclick="exec('XROCKET')" style="width:100%; padding:15px; border-radius:10px; margin-bottom:10px;">🚀 xRocket</button>
+                <button onclick="exec('CRYPTOBOT')" style="width:100%; padding:15px; border-radius:10px; margin-bottom:10px;">🤖 CryptoBot</button>
+                <button id="starBtn" onclick="exec('TELEGRAM')" style="display:none; width:100%; padding:15px; border-radius:10px; color:gold;">⭐ Telegram Stars</button>
             </div>
-            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:20px;">ANNULER</button>
+            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:15px;">ANNULER</button>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
+        let userId = tg.initDataUnsafe.user?.id || 123, userName = tg.initDataUnsafe.user?.first_name || "Joueur";
+        let curGame = 'slots', curMode = 'DEP', curAsset = 'TON';
+        const LIMS = { DEP:{STARS:5, TON:0.2, USDT:0.4}, WIT:{STARS:15, TON:0.7, USDT:1} };
 
-        let userId = tg.initDataUnsafe.user?.id || 12345;
-        let userName = tg.initDataUnsafe.user?.first_name || "Joueur";
-        let currentGame = 'slots', currentMode = 'DEP', currentAsset = 'TON';
-
-        const LIMITS = { DEP: { STARS: 5, TON: 0.2, USDT: 0.4 }, WIT: { STARS: 15, TON: 0.7, USDT: 1 } };
-
-        // --- CHARGEMENT AUTO DES DONNÉES ---
         window.onload = async () => {
-            const r = await fetch('/api/user-data', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: userId })
-            });
-            const data = await r.json();
-            document.getElementById('userBal').innerText = data.balance.toFixed(2);
-            document.getElementById('levelDisplay').innerText = `NIVEAU ${data.level}`;
+            const r = await fetch('/api/user-data', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id:userId}) });
+            const d = await r.json();
+            document.getElementById('userBal').innerText = d.balance.toFixed(2);
+            document.getElementById('lvl').innerText = `NIVEAU ${d.level}`;
         };
 
-        function changeGame(type) {
-            currentGame = type;
+        function changeGame(g, el) {
+            curGame = g;
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.getElementById('tab-'+type).classList.add('active');
-            document.getElementById('game-display').innerText = (type === 'dice') ? '🎲' : '🎰🎰🎰';
+            el.classList.add('active');
+            document.getElementById('game-display').innerText = g === 'dice' ? '🎲' : '🎰🎰🎰';
         }
 
         async function play() {
             const bet = parseFloat(document.getElementById('bet').value);
-            const display = document.getElementById('game-display');
+            const view = document.getElementById('game-display');
             if(!bet || bet <= 0) return;
-
-            display.classList.add('anim-spin');
-            const r = await fetch('/api/play', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: userId, bet, game: currentGame })
-            });
-            const data = await r.json();
-
+            view.classList.add('anim-spin');
+            const r = await fetch('/api/play', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id:userId, bet, game:curGame}) });
+            const d = await r.json();
             setTimeout(() => {
-                display.classList.remove('anim-spin');
-                if(data.error) return tg.showAlert(data.error);
-                display.innerText = (currentGame === 'dice') ? ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][data.result] : data.result.join('');
-                document.getElementById('userBal').innerText = data.newBalance.toFixed(2);
-                document.getElementById('levelDisplay').innerText = `NIVEAU ${data.level}`;
+                view.classList.remove('anim-spin');
+                if(d.error) return tg.showAlert(d.error);
+                view.innerText = curGame === 'dice' ? ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][d.result] : d.result.join('');
+                document.getElementById('userBal').innerText = d.newBalance.toFixed(2);
+                document.getElementById('lvl').innerText = `NIVEAU ${d.level}`;
             }, 800);
         }
 
-        function openSystem(mode, asset) {
-            currentMode = mode; currentAsset = asset;
-            document.getElementById('modalTitle').innerText = `${mode === 'DEP' ? "Dépôt" : "Retrait"} ${asset}`;
-            document.getElementById('modalLimit').innerText = `Min: ${LIMITS[mode][asset]} ${asset}`;
-            document.getElementById('systemModal').style.display = 'flex';
-            document.getElementById('btn-stars').style.display = (asset === 'STARS' && mode === 'DEP') ? 'block' : 'none';
-            document.getElementById('btn-xrocket').style.display = (asset === 'STARS' && mode === 'DEP') ? 'none' : 'block';
-            document.getElementById('btn-cryptobot').style.display = (asset === 'STARS' && mode === 'DEP') ? 'none' : 'block';
+        function openMenu(mode, asset) {
+            curMode = mode; curAsset = asset;
+            document.getElementById('mTitle').innerText = `${mode=='DEP'?'Dépôt':'Retrait'} ${asset}`;
+            document.getElementById('modal').style.display = 'flex';
+            document.getElementById('starBtn').style.display = (asset=='STARS' && mode=='DEP') ? 'block' : 'none';
+            // Cache les options crypto si c'est un dépôt Stars
+            const cryp = (asset=='STARS' && mode=='DEP') ? 'none' : 'block';
+            document.querySelectorAll('#mChoices button:not(#starBtn)').forEach(b => b.style.display = cryp);
         }
 
-        function closeModal() { document.getElementById('systemModal').style.display = 'none'; }
+        function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-        async function executeAction(platform) {
-            const amount = parseFloat(document.getElementById('systemAmount').value);
-            if(!amount || amount < LIMITS[currentMode][currentAsset]) return tg.showAlert("Montant invalide");
-
-            let address = "";
-            if(currentMode === 'WIT') {
-                address = prompt(`Adresse ${currentAsset} :`);
-                if(!address) return;
+        async function exec(plat) {
+            const amt = parseFloat(document.getElementById('mAmount').value);
+            if(!amt || amt < LIMS[curMode][curAsset]) return tg.showAlert(`Min: ${LIMS[curMode][curAsset]}`);
+            
+            let addr = "";
+            if(curMode === 'WIT') {
+                addr = prompt(`Entrez votre adresse USDT/TON ou ID ${plat} (Note: Les Étoiles seront payées en USDT) :`);
+                if(!addr) return;
             }
 
-            const r = await fetch(currentMode === 'DEP' ? '/api/deposit' : '/api/withdraw', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: userId, name: userName, asset: currentAsset, amount, platform, address })
+            const r = await fetch(curMode=='DEP'?'/api/deposit':'/api/withdraw', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({id:userId, name:userName, asset:curAsset, amount:amt, platform:plat, address:addr})
             });
-            const data = await r.json();
-            if(data.success) {
-                if(currentMode === 'DEP') tg.openTelegramLink(data.url);
-                else tg.showAlert(data.message);
+            const d = await r.json();
+            if(d.success) {
+                if(curMode == 'DEP') tg.openTelegramLink(d.url);
+                else tg.showAlert(d.message);
                 closeModal();
-            } else tg.showAlert(data.message);
+            } else tg.showAlert(d.message);
         }
     </script>
 </body>
