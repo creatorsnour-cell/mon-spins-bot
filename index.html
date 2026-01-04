@@ -10,23 +10,22 @@
         .glass { background: var(--card); border: 1px solid rgba(0,242,255,0.2); border-radius: 25px; padding: 20px; margin: 15px; backdrop-filter: blur(10px); }
         .balance { font-size: 38px; color: var(--neon); text-shadow: 0 0 15px var(--neon); font-weight: bold; }
         .tabs { display: flex; justify-content: center; gap: 10px; margin: 15px; }
-        .tab { padding: 12px 25px; border: 1px solid var(--neon); border-radius: 15px; opacity: 0.4; cursor: pointer; }
+        .tab { padding: 12px 25px; border: 1px solid var(--neon); border-radius: 15px; opacity: 0.4; cursor: pointer; transition: 0.3s; }
         .tab.active { opacity: 1; background: var(--neon); color: black; box-shadow: 0 0 20px var(--neon); }
         #game-display { font-size: 80px; min-height: 120px; margin: 25px 0; display: flex; align-items: center; justify-content: center; }
         .anim-spin { animation: spin 0.1s infinite linear; }
         @keyframes spin { from {transform: rotateX(0deg)} to {transform: rotateX(360deg)} }
         .btn-main { background: var(--neon); color: black; border: none; padding: 18px; width: 85%; border-radius: 50px; font-weight: bold; box-shadow: 0 0 15px var(--neon); cursor: pointer; }
-        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:100; justify-content:center; align-items:center; }
         .footer-btns { display: flex; gap: 8px; padding: 15px; }
         .btn-action { flex: 1; background: none; padding: 12px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer; }
-        input { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 80%; border-radius: 15px; text-align: center; outline: none; }
-        button { cursor: pointer; border: none; font-weight: bold; }
+        input { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 80%; border-radius: 15px; text-align: center; outline: none; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div class="glass">
-        <div id="lvl" style="font-size: 10px; opacity: 0.6;">NIVEAU 1</div>
+        <div id="lvl" style="font-size: 10px; opacity: 0.6; letter-spacing: 1px;">CHARGEMENT NIVEAU...</div>
         <div class="balance" id="userBal">0.00</div>
     </div>
 
@@ -38,40 +37,47 @@
     <div class="glass">
         <div id="game-display">🎰🎰🎰</div>
         <input type="number" id="bet" placeholder="MISE">
-        <br><br>
-        <button class="btn-main" onclick="play()">JOUER</button>
+        <br>
+        <button class="btn-main" onclick="play()">LANCER LE PARI</button>
     </div>
 
     <div class="footer-btns">
-        <button onclick="openMenu('DEP', 'STARS')" class="btn-action" style="border:1px solid gold; color:gold;">DÉPÔT STARS</button>
+        <button onclick="openMenu('DEP', 'STARS')" class="btn-action" style="border:1px solid gold; color:gold;">DÉPÔT ⭐</button>
         <button onclick="openMenu('DEP', 'TON')" class="btn-action" style="border:1px solid var(--neon); color:var(--neon);">DÉPÔT CRYPTO</button>
-        <button onclick="openMenu('WIT', 'STARS')" class="btn-action" style="border:1px solid #ff4444; color:#ff4444;">RETRAIT</button>
+        <button onclick="openMenu('WIT', 'TON')" class="btn-action" style="border:1px solid #ff4444; color:#ff4444;">RETRAIT CRYPTO</button>
     </div>
 
     <div id="modal" class="modal">
         <div class="glass" style="width: 85%;">
             <h2 id="mTitle" style="color:var(--neon)">-</h2>
+            <p id="mLimit" style="font-size: 11px; opacity:0.5; margin-bottom:15px;"></p>
+            
             <input type="number" id="mAmount" placeholder="Montant">
-            <div id="mChoices" style="margin-top:20px;">
-                <button onclick="exec('XROCKET')" style="width:100%; padding:15px; border-radius:10px; margin-bottom:10px; background: #222; color:white;">🚀 xRocket</button>
-                <button onclick="exec('CRYPTOBOT')" style="width:100%; padding:15px; border-radius:10px; margin-bottom:10px; background: #222; color:white;">🤖 CryptoBot</button>
-                <button id="starBtn" onclick="exec('TELEGRAM')" style="display:none; width:100%; padding:15px; border-radius:10px; color:gold; background: #222;">⭐ Telegram Stars</button>
+            <select id="assetSelect" style="display:none; width:88%; padding:15px; border-radius:15px; background:#111; color:white; border:1px solid var(--neon); margin-bottom:10px;">
+                <option value="TON">TON Coin</option>
+                <option value="USDT">USDT (Tether)</option>
+            </select>
+
+            <div id="mChoices" style="margin-top:10px;">
+                <button onclick="exec('XROCKET')" style="width:100%; padding:15px; border-radius:12px; margin-bottom:8px; background:#222; color:white; border:1px solid #444;">🚀 via xRocket</button>
+                <button onclick="exec('CRYPTOBOT')" style="width:100%; padding:15px; border-radius:12px; margin-bottom:8px; background:#222; color:white; border:1px solid #444;">🤖 via CryptoBot</button>
+                <button id="starBtn" onclick="exec('TELEGRAM')" style="display:none; width:100%; padding:15px; border-radius:12px; color:gold; background:#222; border:1px solid gold;">⭐ Telegram Stars</button>
             </div>
-            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:15px;">ANNULER</button>
+            <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:15px; opacity:0.6;">ANNULER</button>
         </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        let userId = tg.initDataUnsafe.user?.id || 123, userName = tg.initDataUnsafe.user?.first_name || "Joueur";
+        let userId = tg.initDataUnsafe.user?.id || 0, userName = tg.initDataUnsafe.user?.first_name || "Joueur";
         let curGame = 'slots', curMode = 'DEP', curAsset = 'TON';
-        const LIMS = { DEP:{STARS:5, TON:0.2, USDT:0.4}, WIT:{STARS:15, TON:0.7, USDT:1} };
+        const LIMS = { DEP:{STARS:5, TON:0.2, USDT:0.4}, WIT:{TON:0.7, USDT:1} };
 
         window.onload = async () => {
             const r = await fetch('/api/user-data', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id:userId}) });
             const d = await r.json();
             document.getElementById('userBal').innerText = d.balance.toFixed(2);
-            document.getElementById('lvl').innerText = `NIVEAU ${d.level}`;
+            document.getElementById('lvl').innerText = `NIVEAU ${d.level} • XP ${d.xp}`;
         };
 
         function changeGame(g, el) {
@@ -93,40 +99,39 @@
                 if(d.error) return tg.showAlert(d.error);
                 view.innerText = curGame === 'dice' ? ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][d.result] : d.result.join('');
                 document.getElementById('userBal').innerText = d.newBalance.toFixed(2);
-                document.getElementById('lvl').innerText = `NIVEAU ${d.level}`;
+                document.getElementById('lvl').innerText = `NIVEAU ${d.level} • XP ${d.xp}`;
             }, 800);
         }
 
         function openMenu(mode, asset) {
             curMode = mode; curAsset = asset;
-            document.getElementById('mTitle').innerText = `${mode=='DEP'?'Dépôt':'Retrait'} ${asset}`;
+            document.getElementById('mTitle').innerText = (mode === 'DEP') ? `Dépôt ${asset}` : "Retrait Crypto";
+            document.getElementById('mLimit').innerText = `Minimum requis: ${LIMS[mode][asset] || '0.70'} ${asset}`;
+            document.getElementById('assetSelect').style.display = (mode === 'WIT') ? 'block' : 'none';
+            document.getElementById('starBtn').style.display = (asset === 'STARS' && mode === 'DEP') ? 'block' : 'none';
+            
+            const crypBtns = (asset === 'STARS' && mode === 'DEP') ? 'none' : 'block';
+            document.querySelectorAll('#mChoices button:not(#starBtn)').forEach(b => b.style.display = crypBtns);
             document.getElementById('modal').style.display = 'flex';
-            document.getElementById('starBtn').style.display = (asset=='STARS' && mode=='DEP') ? 'block' : 'none';
-            const cryp = (asset=='STARS' && mode=='DEP') ? 'none' : 'block';
-            document.querySelectorAll('#mChoices button:not(#starBtn)').forEach(b => b.style.display = cryp);
         }
 
         function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
         async function exec(plat) {
             const amt = parseFloat(document.getElementById('mAmount').value);
-            if(!amt || amt < LIMS[curMode][curAsset]) {
-                return tg.showAlert(`Min ${curMode === 'DEP' ? 'dépôt' : 'retrait'} ${curAsset}: ${LIMS[curMode][curAsset]}`);
-            }
+            const asset = (curMode === 'WIT') ? document.getElementById('assetSelect').value : curAsset;
+            
+            if(!amt || amt < LIMS[curMode][asset]) return tg.showAlert(`Montant insuffisant. Min: ${LIMS[curMode][asset]} ${asset}`);
             
             let addr = "";
             if(curMode === 'WIT') {
-                let promptMsg = curAsset === 'STARS' ? 
-                    "Entrez votre adresse USDT pour la conversion de vos Étoiles :" : 
-                    `Entrez votre adresse ${curAsset} ou ID ${plat} :`;
-                addr = prompt(promptMsg);
+                addr = prompt(`Entrez votre adresse ${asset} ou votre ID ${plat} :`);
                 if(!addr) return;
             }
 
             const r = await fetch(curMode == 'DEP' ? '/api/deposit' : '/api/withdraw', {
-                method: 'POST', 
-                headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({id:userId, name:userName, asset:curAsset, amount:amt, platform:plat, address:addr})
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({id:userId, name:userName, asset:asset, amount:amt, platform:plat, address:addr})
             });
             const d = await r.json();
             if(d.success) {
