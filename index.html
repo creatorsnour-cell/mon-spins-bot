@@ -15,11 +15,12 @@
         #game-display { font-size: 80px; min-height: 120px; margin: 25px 0; display: flex; align-items: center; justify-content: center; }
         .anim-spin { animation: spin 0.1s infinite linear; }
         @keyframes spin { from {transform: rotateX(0deg)} to {transform: rotateX(360deg)} }
-        .btn-main { background: var(--neon); color: black; border: none; padding: 18px; width: 85%; border-radius: 50px; font-weight: bold; box-shadow: 0 0 15px var(--neon); }
+        .btn-main { background: var(--neon); color: black; border: none; padding: 18px; width: 85%; border-radius: 50px; font-weight: bold; box-shadow: 0 0 15px var(--neon); cursor: pointer; }
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; justify-content:center; align-items:center; }
         .footer-btns { display: flex; gap: 8px; padding: 15px; }
         .btn-action { flex: 1; background: none; padding: 12px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer; }
-        input { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 80%; border-radius: 15px; text-align: center; }
+        input { background: rgba(255,255,255,0.05); border: 1px solid var(--neon); color: white; padding: 15px; width: 80%; border-radius: 15px; text-align: center; outline: none; }
+        button { cursor: pointer; border: none; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -52,9 +53,9 @@
             <h2 id="mTitle" style="color:var(--neon)">-</h2>
             <input type="number" id="mAmount" placeholder="Montant">
             <div id="mChoices" style="margin-top:20px;">
-                <button onclick="exec('XROCKET')" style="width:100%; padding:15px; border-radius:10px; margin-bottom:10px;">🚀 xRocket</button>
-                <button onclick="exec('CRYPTOBOT')" style="width:100%; padding:15px; border-radius:10px; margin-bottom:10px;">🤖 CryptoBot</button>
-                <button id="starBtn" onclick="exec('TELEGRAM')" style="display:none; width:100%; padding:15px; border-radius:10px; color:gold;">⭐ Telegram Stars</button>
+                <button onclick="exec('XROCKET')" style="width:100%; padding:15px; border-radius:10px; margin-bottom:10px; background: #222; color:white;">🚀 xRocket</button>
+                <button onclick="exec('CRYPTOBOT')" style="width:100%; padding:15px; border-radius:10px; margin-bottom:10px; background: #222; color:white;">🤖 CryptoBot</button>
+                <button id="starBtn" onclick="exec('TELEGRAM')" style="display:none; width:100%; padding:15px; border-radius:10px; color:gold; background: #222;">⭐ Telegram Stars</button>
             </div>
             <button onclick="closeModal()" style="background:none; border:none; color:white; margin-top:15px;">ANNULER</button>
         </div>
@@ -101,7 +102,6 @@
             document.getElementById('mTitle').innerText = `${mode=='DEP'?'Dépôt':'Retrait'} ${asset}`;
             document.getElementById('modal').style.display = 'flex';
             document.getElementById('starBtn').style.display = (asset=='STARS' && mode=='DEP') ? 'block' : 'none';
-            // Cache les options crypto si c'est un dépôt Stars
             const cryp = (asset=='STARS' && mode=='DEP') ? 'none' : 'block';
             document.querySelectorAll('#mChoices button:not(#starBtn)').forEach(b => b.style.display = cryp);
         }
@@ -110,16 +110,22 @@
 
         async function exec(plat) {
             const amt = parseFloat(document.getElementById('mAmount').value);
-            if(!amt || amt < LIMS[curMode][curAsset]) return tg.showAlert(`Min: ${LIMS[curMode][curAsset]}`);
+            if(!amt || amt < LIMS[curMode][curAsset]) {
+                return tg.showAlert(`Min ${curMode === 'DEP' ? 'dépôt' : 'retrait'} ${curAsset}: ${LIMS[curMode][curAsset]}`);
+            }
             
             let addr = "";
             if(curMode === 'WIT') {
-                addr = prompt(`Entrez votre adresse USDT/TON ou ID ${plat} (Note: Les Étoiles seront payées en USDT) :`);
+                let promptMsg = curAsset === 'STARS' ? 
+                    "Entrez votre adresse USDT pour la conversion de vos Étoiles :" : 
+                    `Entrez votre adresse ${curAsset} ou ID ${plat} :`;
+                addr = prompt(promptMsg);
                 if(!addr) return;
             }
 
-            const r = await fetch(curMode=='DEP'?'/api/deposit':'/api/withdraw', {
-                method: 'POST', headers: {'Content-Type':'application/json'},
+            const r = await fetch(curMode == 'DEP' ? '/api/deposit' : '/api/withdraw', {
+                method: 'POST', 
+                headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({id:userId, name:userName, asset:curAsset, amount:amt, platform:plat, address:addr})
             });
             const d = await r.json();
