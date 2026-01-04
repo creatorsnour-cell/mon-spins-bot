@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -10,58 +10,58 @@
         .glass { background: var(--card); border: 1px solid rgba(0,242,255,0.2); border-radius: 20px; padding: 15px; margin: 10px; backdrop-filter: blur(10px); }
         .balance { font-size: 32px; color: var(--neon); font-weight: bold; text-shadow: 0 0 10px var(--neon); }
         .tabs { display: flex; justify-content: center; gap: 8px; margin: 10px; }
-        .tab { flex: 1; padding: 12px; border: 1px solid var(--neon); border-radius: 12px; opacity: 0.4; cursor: pointer; font-size: 13px; }
+        .tab { flex: 1; padding: 12px; border: 1px solid var(--neon); border-radius: 12px; opacity: 0.4; cursor: pointer; font-size: 13px; text-align: center; }
         .tab.active { opacity: 1; background: var(--neon); color: black; font-weight: bold; }
         #game-display { font-size: 60px; min-height: 90px; margin: 15px; display: flex; align-items: center; justify-content: center; }
-        .btn-main { background: var(--neon); color: black; border: none; padding: 16px; width: 85%; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 0 15px var(--neon); }
+        .btn-main { background: var(--neon); color: black; border: none; padding: 16px; width: 85%; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 0 15px var(--neon); cursor: pointer; }
         .footer-btns { display: flex; gap: 5px; padding: 10px; }
-        .btn-action { flex: 1; background: #111; border: 1px solid #333; padding: 10px; border-radius: 10px; font-size: 10px; color: white; font-weight: bold; }
+        .btn-action { flex: 1; background: #111; border: 1px solid #333; padding: 10px; border-radius: 10px; font-size: 10px; color: white; font-weight: bold; cursor: pointer; }
         .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:100; justify-content:center; align-items:center; }
-        input, select { background: #000; border: 1px solid var(--neon); color: white; padding: 12px; width: 80%; border-radius: 10px; margin-bottom: 10px; text-align: center; }
+        input, select { background: #000; border: 1px solid var(--neon); color: white; padding: 12px; width: 80%; border-radius: 10px; margin-bottom: 10px; text-align: center; outline: none; }
         .hist-item { display: flex; justify-content: space-between; font-size: 10px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
 
-    <div class="glass">
-        <div id="lvl" style="font-size: 10px; opacity: 0.6; margin-bottom: 5px;">CHARGEMENT...</div>
+    <div class="glass" style="text-align: center;">
+        <div id="lvl" style="font-size: 10px; opacity: 0.6; margin-bottom: 5px;">LOADING...</div>
         <div class="balance" id="userBal">0.00</div>
     </div>
 
     <div id="history-box" class="glass" style="display:none; padding: 10px;">
-        <div style="font-size: 9px; opacity: 0.5; margin-bottom: 5px;">HISTORIQUE RÉCENT</div>
+        <div style="font-size: 9px; opacity: 0.5; margin-bottom: 5px; font-weight: bold;">RECENT ACTIVITY</div>
         <div id="hist-list"></div>
     </div>
 
     <div class="tabs">
         <div class="tab active" onclick="changeGame('slots', this)">🎰 SLOTS</div>
-        <div class="tab" onclick="changeGame('dice', this)">🎲 DÉS</div>
+        <div class="tab" onclick="changeGame('dice', this)">🎲 DICE</div>
     </div>
 
     <div class="glass" style="text-align: center;">
         <div id="game-display">🎰🎰🎰</div>
-        <input type="number" id="bet" placeholder="MISE" step="0.01">
-        <button class="btn-main" onclick="play()">JOUER MAINTENANT</button>
+        <input type="number" id="bet" placeholder="BET AMOUNT" step="0.01">
+        <button class="btn-main" onclick="play()">SPIN NOW</button>
     </div>
 
     <div class="footer-btns">
-        <button onclick="openMenu('DEP', 'STARS')" style="border-color:gold; color:gold;" class="btn-action">DÉPÔT ⭐</button>
-        <button onclick="openMenu('DEP', 'TON')" class="btn-action">DÉPÔT CRYPTO</button>
-        <button onclick="openMenu('WIT', 'TON')" style="border-color:#ff4444; color:#ff4444;" class="btn-action">RETRAIT</button>
+        <button onclick="openMenu('DEP', 'STARS')" style="border-color:gold; color:gold;" class="btn-action">DEPOSIT ⭐</button>
+        <button onclick="openMenu('DEP', 'TON')" class="btn-action">DEPOSIT CRYPTO</button>
+        <button onclick="openMenu('WIT', 'TON')" style="border-color:#ff4444; color:#ff4444;" class="btn-action">WITHDRAW</button>
     </div>
 
     <div id="modal" class="modal">
         <div class="glass" style="width: 85%; text-align: center;">
             <h3 id="mTitle" style="color:var(--neon); margin:0 0 10px 0;">-</h3>
             <p id="mLimit" style="font-size: 10px; opacity:0.5; margin-bottom:15px;"></p>
-            <input type="number" id="mAmount" placeholder="Montant">
+            <input type="number" id="mAmount" placeholder="Amount">
             <select id="assetSelect" style="display:none; width:88%;"></select>
             <div id="mChoices">
                 <button onclick="exec('XROCKET')" style="width:100%; padding:14px; margin-bottom:8px; background:#111; color:white; border:1px solid #333; border-radius:10px;">🚀 xRocket</button>
                 <button onclick="exec('CRYPTOBOT')" style="width:100%; padding:14px; margin-bottom:8px; background:#111; color:white; border:1px solid #333; border-radius:10px;">🤖 CryptoBot</button>
-                <button id="starBtn" onclick="exec('TELEGRAM')" style="display:none; width:100%; padding:14px; color:gold; background:#111; border:1px solid gold; border-radius:10px;">⭐ Stars Telegram</button>
+                <button id="starBtn" onclick="exec('TELEGRAM')" style="display:none; width:100%; padding:14px; color:gold; background:#111; border:1px solid gold; border-radius:10px;">⭐ Telegram Stars</button>
             </div>
-            <button onclick="closeModal()" style="background:none; border:none; color:#666; font-size: 12px; margin-top:10px;">ANNULER</button>
+            <button onclick="closeModal()" style="background:none; border:none; color:#666; font-size: 12px; margin-top:10px; cursor: pointer;">CANCEL</button>
         </div>
     </div>
 
@@ -78,7 +78,7 @@
 
         function updateUI(d) {
             document.getElementById('userBal').innerText = d.balance.toFixed(2);
-            document.getElementById('lvl').innerText = `NIVEAU ${d.level} • XP ${d.xp}`;
+            document.getElementById('lvl').innerText = `LEVEL ${d.level} • XP ${d.xp}`;
             if (d.history && d.history.length > 0) {
                 document.getElementById('history-box').style.display = 'block';
                 document.getElementById('hist-list').innerHTML = d.history.slice(0,3).map(h => 
@@ -101,8 +101,8 @@
 
         function openMenu(mode, asset) {
             curMode = mode; curAsset = asset;
-            document.getElementById('mTitle').innerText = (mode === 'DEP') ? `Dépôt ${asset}` : "Retrait";
-            document.getElementById('mLimit').innerText = `Montant Min: ${LIMS[mode][asset] || 0.2} ${asset}`;
+            document.getElementById('mTitle').innerText = (mode === 'DEP') ? `Deposit ${asset}` : "Withdraw Crypto";
+            document.getElementById('mLimit').innerText = `Min Amount: ${LIMS[mode][asset] || 0.2} ${asset}`;
             document.getElementById('assetSelect').style.display = (mode === 'WIT') ? 'block' : 'none';
             document.getElementById('assetSelect').innerHTML = '<option value="TON">TON</option><option value="USDT">USDT</option>';
             document.getElementById('starBtn').style.display = (asset === 'STARS' && mode === 'DEP') ? 'block' : 'none';
@@ -115,10 +115,13 @@
         async function exec(plat) {
             const amt = parseFloat(document.getElementById('mAmount').value);
             const asset = (curMode === 'WIT') ? document.getElementById('assetSelect').value : curAsset;
-            if(!amt || amt < LIMS[curMode][asset]) return tg.showAlert("Montant insuffisant");
+            if(!amt || amt < LIMS[curMode][asset]) return tg.showAlert("Amount too low");
             
             let addr = "";
-            if(curMode === 'WIT') { addr = prompt(`Entrez votre adresse ${asset} :`); if(!addr) return; }
+            if(curMode === 'WIT') { 
+                addr = prompt(`Enter your ${asset} address:`); 
+                if(!addr) return; 
+            }
 
             const r = await fetch(curMode == 'DEP' ? '/api/deposit' : '/api/withdraw', {
                 method: 'POST', headers: {'Content-Type':'application/json'},
