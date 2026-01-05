@@ -22,18 +22,17 @@ const LIMITS = {
     WIT: { TON: 0.2, USDT: 0.5 }
 };
 
-// --- WITHDRAWAL LOGIC (AUTO-TRANSFER) ---
+// --- WITHDRAWAL (AUTO-TRANSFER) ---
 app.post('/api/withdraw', async (req, res) => {
-    const { id, asset, amount, platform, address } = req.body;
+    const { id, asset, amount, platform } = req.body;
     const user = db[id];
 
     if (!user || user.balance < amount) return res.json({ success: false, message: "Insufficient balance" });
-    if (amount < LIMITS.WIT[asset]) return res.json({ success: false, message: `Minimum withdraw is ${LIMITS.WIT[asset]} ${asset}` });
+    if (amount < LIMITS.WIT[asset]) return res.json({ success: false, message: `Min withdraw: ${LIMITS.WIT[asset]} ${asset}` });
 
     try {
         let success = false;
         if (platform === 'CRYPTOBOT') {
-            // Using CryptoBot Transfer API
             const r = await axios.post('https://pay.crypt.bot/api/transfer', {
                 user_id: parseInt(id),
                 asset: asset.toUpperCase(),
@@ -42,7 +41,6 @@ app.post('/api/withdraw', async (req, res) => {
             }, { headers: { 'Crypto-Pay-API-Token': CONFIG.CRYPTO_TOKEN } });
             success = r.data.ok;
         } else {
-            // Using xRocket Transfer API
             const r = await axios.post('https://pay.ton-rocket.com/app/transfer', {
                 tgUserId: parseInt(id),
                 currency: asset.toUpperCase(),
@@ -54,32 +52,16 @@ app.post('/api/withdraw', async (req, res) => {
         if (success) {
             user.balance -= parseFloat(amount);
             saveDB();
-            res.json({ success: true, message: "Withdrawal successful! Check your wallet." });
+            res.json({ success: true, message: "Withdrawal successful!" });
         } else {
-            res.json({ success: false, message: "Platform error. Try again later." });
+            res.json({ success: false, message: "Platform error. Check bot balance." });
         }
     } catch (e) {
         res.json({ success: false, message: "API Error: Ensure the bot has funds to pay." });
     }
 });
 
-// --- DEPOSIT & GAMES (Same as before but English) ---
-app.post('/api/check-task', async (req, res) => {
-    const { id } = req.body;
-    try {
-        const r = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getChatMember`, {
-            params: { chat_id: CONFIG.CHANNEL_ID, user_id: id }
-        });
-        const status = r.data.result.status;
-        if (['member', 'administrator', 'creator'].includes(status)) {
-            if (!db[id].taskDone) {
-                db[id].balance += 0.05; db[id].taskDone = true; saveDB();
-                res.json({ success: true, message: "Success! +0.05 TON added." });
-            } else { res.json({ success: false, message: "Already claimed!" }); }
-        } else { res.json({ success: false, message: "Please join the channel first." }); }
-    } catch (e) { res.json({ success: false, message: "Verification error." }); }
-});
-
+// --- DEPOSIT ---
 app.post('/api/deposit', async (req, res) => {
     const { id, asset, amount, platform } = req.body;
     try {
@@ -105,6 +87,7 @@ app.post('/api/deposit', async (req, res) => {
     } catch (e) { res.json({ success: false, message: "Payment API Error." }); }
 });
 
+// --- GAME LOGIC (Dice x3 Logic) ---
 app.post('/api/play', (req, res) => {
     const { id, bet, game, minesCount } = req.body;
     const user = db[id];
@@ -118,7 +101,8 @@ app.post('/api/play', (req, res) => {
         if (result[0] === result[1] && result[1] === result[2]) win = bet * 5;
     } else if (game === 'dice') {
         result = Math.floor(Math.random() * 6) + 1;
-        if (result >= 4) win = bet * 2;
+        // Logic: 1,2,3 Lose | 4,5,6 Win x3
+        if (result >= 4) win = bet * 3;
     } else if (game === 'mines') {
         const hit = Math.random() < (minesCount / 10);
         result = hit ? "💥" : "💎";
@@ -126,6 +110,22 @@ app.post('/api/play', (req, res) => {
     }
     user.balance += win; saveDB();
     res.json({ result, win, balance: user.balance });
+});
+
+app.post('/api/check-task', async (req, res) => {
+    const { id } = req.body;
+    try {
+        const r = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getChatMember`, {
+            params: { chat_id: CONFIG.CHANNEL_ID, user_id: id }
+        });
+        const status = r.data.result.status;
+        if (['member', 'administrator', 'creator'].includes(status)) {
+            if (!db[id].taskDone) {
+                db[id].balance += 0.05; db[id].taskDone = true; saveDB();
+                res.json({ success: true, message: "Success! +0.05 TON added." });
+            } else { res.json({ success: false, message: "Already claimed!" }); }
+        } else { res.json({ success: false, message: "Join the channel @starrussi first!" }); }
+    } catch (e) { res.json({ success: false, message: "Error: Ensure bot is admin in channel." }); }
 });
 
 app.post('/api/user-data', (req, res) => {
