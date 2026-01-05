@@ -2,24 +2,34 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --accent: #ffd700; --bg: #0d1117; --card: #161b22; }
-        body { background: var(--bg); color: white; font-family: sans-serif; text-align: center; margin: 0; }
-        .card { background: var(--card); border-radius: 15px; padding: 20px; margin: 10px; border: 1px solid #333; }
-        .btn { background: var(--accent); color: black; border: none; padding: 12px; width: 90%; border-radius: 10px; font-weight: bold; margin: 5px 0; }
-        .nav { display: flex; background: #21262d; margin: 10px; border-radius: 10px; padding: 5px; }
-        .nav div { flex: 1; padding: 10px; font-size: 12px; cursor: pointer; }
-        .active { background: #30363d; color: var(--accent); border-radius: 8px; }
-        input, select { width: 85%; padding: 10px; margin: 5px; border-radius: 8px; background: #000; color: #fff; border: 1px solid #444; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; padding-bottom: 30px; }
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin: 12px; border: 1px solid #30363d; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .balance { font-size: 42px; font-weight: 800; color: var(--accent); text-shadow: 0 0 10px rgba(255,215,0,0.3); }
+        .btn { background: var(--accent); color: #000; border: none; padding: 14px; width: 100%; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 5px 0; }
+        .btn:active { transform: scale(0.96); }
+        .btn-alt { background: #21262d; color: white; border: 1px solid #444; }
+        
+        /* ANIMATIONS JEUX */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(1080deg); } }
+        .spinning { animation: spin 1.5s cubic-bezier(0.1, 0.7, 1.0, 0.1); }
+        .slot-box { display: flex; justify-content: center; gap: 10px; font-size: 50px; height: 70px; }
+        
+        .nav { display: flex; gap: 5px; background: #1c2128; padding: 5px; border-radius: 12px; margin: 10px; }
+        .nav div { flex:1; padding: 10px; font-size: 13px; border-radius: 8px; color: #888; }
+        .nav .active { background: #30363d; color: var(--accent); box-shadow: 0 0 5px var(--accent); }
+        
+        .section-title { font-size: 14px; text-transform: uppercase; color: #888; margin: 15px 0 5px 15px; text-align: left; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2 id="uName">Nour</h2>
-    <h1 id="bal" style="color:var(--accent); font-size:40px;">0.00</h1>
+    <div style="opacity:0.7; font-size:14px;">SOLDE DE NOUR</div>
+    <div class="balance" id="bal">0.00</div>
 </div>
 
 <div class="nav">
@@ -30,39 +40,53 @@
 </div>
 
 <div id="game-zone" class="card">
-    <div id="display" style="font-size: 40px;">🎰🎰🎰</div>
-    <div id="m-opt" style="display:none;"><input type="number" id="mCount" value="3" min="1" max="9"></div>
-    <input type="number" id="bet" placeholder="Mise">
-    <button class="btn" onclick="play()">JOUER</button>
+    <div id="slot-display" class="slot-box"><span>🎰</span><span>🎰</span><span>🎰</span></div>
+    <div id="dice-display" style="font-size:80px; display:none;">🎲</div>
+    <div id="mine-display" style="display:none; font-size:50px;">💎</div>
+    
+    <div id="mines-config" style="display:none; margin-top:10px;">
+        <input type="number" id="mCount" value="3" min="1" max="9" style="width:50px; background:#000; color:#fff; border:1px solid #444; padding:8px; border-radius:8px;">
+        <span style="font-size:12px;">Mines</span>
+    </div>
+    
+    <input type="number" id="bet" placeholder="Mise (ex: 0.1)" style="width:80%; padding:12px; margin:15px 0; border-radius:10px; border:1px solid #444; background:#000; color:#fff;">
+    <button class="btn" id="playBtn" onclick="play()">LANCER LE JEU</button>
 </div>
 
 <div id="task-zone" class="card" style="display:none;">
-    <h3>Mission @starrussi</h3>
-    <button class="btn" onclick="tg.openTelegramLink('https://t.me/starrussi')">Rejoindre</button>
-    <button class="btn" onclick="verify()">Vérifier (Done)</button>
+    <h3>🎁 Bonus Gratuit</h3>
+    <p>Abonnez-vous à @starrussi pour recevoir 0.05 TON.</p>
+    <button class="btn" onclick="tg.openTelegramLink('https://t.me/starrussi')">REJOINDRE LE CANAL</button>
+    <button class="btn-alt btn" onclick="verify()">VÉRIFIER (DONE)</button>
 </div>
 
-<div class="card">
-    <button class="btn" onclick="showM('DEP')" style="background:#21262d; color:white;">Dépôt</button>
-    <button class="btn" onclick="showM('WIT')" style="background:#21262d; color:white;">Retrait</button>
+<div class="section-title">Recharge Étoiles</div>
+<div class="card"><button class="btn" style="background:#4b9ced; color:white;" onclick="openP('STARS','DEP')">⭐ DÉPOSER DES ÉTOILES</button></div>
+
+<div class="section-title">Crypto (TON / USDT)</div>
+<div class="card" style="display:flex; gap:10px;">
+    <button class="btn btn-alt" onclick="openP('CRYPTO','DEP')">📥 DÉPÔT</button>
+    <button class="btn btn-alt" onclick="openP('CRYPTO','WIT')">📤 RETRAIT</button>
 </div>
 
-<div id="modal" style="display:none; position:fixed; top:0; background:rgba(0,0,0,0.9); width:100%; height:100%; align-items:center; justify-content:center;">
-    <div class="card" style="width:80%;">
-        <h3 id="mTitle">Dépôt</h3>
-        <select id="mAsset" onchange="upd()"><option value="TON">TON</option><option value="USDT">USDT</option><option value="STARS">STARS</option></select>
-        <select id="mPlat"><option value="XROCKET">xRocket</option><option value="CRYPTOBOT">CryptoBot</option></select>
-        <input type="number" id="mQty" placeholder="Montant">
-        <input type="text" id="mAddr" style="display:none;" placeholder="Adresse de retrait">
-        <button class="btn" onclick="exec()">Confirmer</button>
-        <button class="btn" onclick="document.getElementById('modal').style.display='none'" style="background:none; color:gray;">Fermer</button>
+<div id="modal" style="display:none; position:fixed; top:0; background:rgba(0,0,0,0.95); width:100%; height:100%; align-items:center; justify-content:center; z-index:100;">
+    <div class="card" style="width:85%;">
+        <h2 id="mTitle">Dépôt</h2>
+        <div id="crypto-options">
+            <select id="mAsset" style="width:100%; padding:10px; margin-bottom:10px;"><option value="TON">TON</option><option value="USDT">USDT</option></select>
+            <select id="mPlat" style="width:100%; padding:10px;"><option value="XROCKET">via xRocket</option><option value="CRYPTOBOT">via CryptoBot</option></select>
+        </div>
+        <input type="number" id="mQty" placeholder="Montant" style="width:90%; padding:12px; margin:15px 0;">
+        <input type="text" id="mAddr" placeholder="Adresse Portefeuille" style="display:none; width:90%; padding:12px; margin-bottom:15px;">
+        <button class="btn" onclick="execPay()">CONFIRMER</button>
+        <button class="btn-alt btn" onclick="closeM()">FERMER</button>
     </div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp; tg.expand();
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
-    let curG = 'slots'; let curM = 'DEP';
+    let curG = 'slots'; let curM = 'DEP'; let isPlaying = false;
 
     async function sync() {
         const r = await fetch('/api/user-data', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
@@ -70,20 +94,47 @@
     }
 
     function setG(g) {
-        curG = g; document.querySelectorAll('.nav div').forEach(d=>d.classList.remove('active'));
+        curG = g;
+        document.querySelectorAll('.nav div').forEach(d => d.classList.remove('active'));
         document.getElementById('t-'+g).classList.add('active');
-        document.getElementById('game-zone').style.display = (g==='tasks')?'none':'block';
-        document.getElementById('task-zone').style.display = (g==='tasks')?'block':'none';
-        document.getElementById('m-opt').style.display = (g==='mines')?'block':'none';
+        document.getElementById('game-zone').style.display = (g === 'tasks') ? 'none' : 'block';
+        document.getElementById('task-zone').style.display = (g === 'tasks') ? 'block' : 'none';
+        
+        document.getElementById('slot-display').style.display = (g === 'slots') ? 'flex' : 'none';
+        document.getElementById('dice-display').style.display = (g === 'dice') ? 'block' : 'none';
+        document.getElementById('mine-display').style.display = (g === 'mines') ? 'block' : 'none';
+        document.getElementById('mines-config').style.display = (g === 'mines') ? 'block' : 'none';
     }
 
     async function play() {
+        if(isPlaying) return;
         const bet = parseFloat(document.getElementById('bet').value);
-        const minesCount = parseInt(document.getElementById('mCount').value);
-        const r = await fetch('/api/play', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, bet, game:curG, minesCount}) });
-        const d = await r.json(); if(d.error) return tg.showAlert(d.error);
-        document.getElementById('display').innerText = d.win > 0 ? "💰 GAGNÉ !" : "❌ PERDU";
-        sync();
+        if(!bet || bet <= 0) return tg.showAlert("Entrez une mise !");
+        
+        isPlaying = true;
+        const disp = (curG==='slots') ? document.getElementById('slot-display') : (curG==='dice') ? document.getElementById('dice-display') : document.getElementById('mine-display');
+        disp.classList.add('spinning');
+
+        const r = await fetch('/api/play', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:uid, bet, game:curG, minesCount: parseInt(document.getElementById('mCount').value)})
+        });
+        const d = await r.json();
+
+        setTimeout(() => {
+            disp.classList.remove('spinning');
+            if(d.error) tg.showAlert(d.error);
+            else if(d.win > 0) {
+                tg.showAlert(`GAGNÉ ! +${d.win.toFixed(2)}`);
+                if(curG==='dice') disp.innerText = `🎲 ${d.roll}`;
+                if(curG==='mines') disp.innerText = `💎`;
+            } else {
+                tg.showAlert("PERDU ! Recommence.");
+                if(curG==='dice') disp.innerText = `🎲 ${d.roll}`;
+                if(curG==='mines') disp.innerText = `💥`;
+            }
+            sync(); isPlaying = false;
+        }, 1500);
     }
 
     async function verify() {
@@ -91,13 +142,16 @@
         const d = await r.json(); tg.showAlert(d.message); sync();
     }
 
-    function showM(m) {
-        curM = m; document.getElementById('modal').style.display='flex';
-        document.getElementById('mTitle').innerText = m==='DEP'?'Dépôt':'Retrait';
-        document.getElementById('mAddr').style.display = m==='WIT'?'block':'none';
+    function openP(type, mode) {
+        curM = mode;
+        document.getElementById('modal').style.display='flex';
+        document.getElementById('mTitle').innerText = (mode==='DEP'?'Dépôt ':'Retrait ') + (type==='STARS'?'Stars':'Crypto');
+        document.getElementById('crypto-options').style.display = (type==='STARS') ? 'none' : 'block';
+        document.getElementById('mAddr').style.display = (mode==='WIT') ? 'block' : 'none';
+        if(type==='STARS') document.getElementById('mAsset').value = 'STARS';
     }
 
-    async function exec() {
+    async function execPay() {
         const asset = document.getElementById('mAsset').value;
         const amount = document.getElementById('mQty').value;
         const platform = document.getElementById('mPlat').value;
@@ -108,9 +162,11 @@
         });
         const d = await res.json();
         if(d.url) tg.openTelegramLink(d.url); else tg.showAlert(d.message);
-        document.getElementById('modal').style.display='none';
+        closeM();
     }
-    sync();
+
+    function closeM() { document.getElementById('modal').style.display='none'; }
+    setInterval(sync, 5000); sync();
 </script>
 </body>
 </html>
