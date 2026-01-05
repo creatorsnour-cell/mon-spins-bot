@@ -6,7 +6,6 @@ const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// --- CONFIGURATION ---
 const BOT_TOKEN = '8524606829:AAGIeB1RfnpsMvkNgfZiTi2R1bBf3cU8IgA';
 const CRYPTO_TOKEN = '510532:AAU6L9GFAuEs020tGnbJfSKOEPBDIkHmaAD';
 const XROCKET_TOKEN = '49264a863b86fa1418a0a3969';
@@ -16,86 +15,30 @@ const DB_FILE = './database.json';
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
 const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
+// Configuration des nouvelles limites demandées
 const LIMITS = {
     DEP: { STARS: 5, TON: 0.05, USDT: 0.1 },
-    WIT: { TON: 0.2, USDT: 0.5 }
+    WIT: { TON: 0.5, USDT: 0.5 } // Retrait minimum à 0.5 comme demandé
 };
 
-// --- LOGIQUE TELEGRAM STARS (WEBHOOKS OFFICIELS) ---
-// Cette route doit être configurée comme Webhook URL de votre bot Telegram
-app.post('/webhook/telegram', async (req, res) => {
-    const update = req.body;
+// --- GESTION DES DÉPÔTS & WEBHOOKS ---
 
-    // 1. Étape Pre-Checkout (Obligatoire selon la doc)
-    if (update.pre_checkout_query) {
-        await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
-            pre_checkout_query_id: update.pre_checkout_query.id,
-            ok: true
-        });
-    }
-
-    // 2. Étape de Paiement Réussi
-    if (update.message && update.message.successful_payment) {
-        const payInfo = update.message.successful_payment;
-        const userId = update.message.from.id;
-        const amountStars = payInfo.total_amount; // En Stars
-
-        if (db[userId]) {
-            db[userId].balance += amountStars;
-            db[userId].history.unshift({ type: 'Dépôt ⭐', amount: amountStars, asset: 'STARS', date: 'Auto' });
-            saveDB();
-            
-            await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                chat_id: userId,
-                text: `✅ Paiement reçu ! +${amountStars} Stars ont été ajoutés.`
-            });
-        }
-    }
-    res.sendStatus(200);
-});
-
-// --- API UTILISATEUR & JEU ---
-app.post('/api/user-data', (req, res) => {
-    const { id } = req.body;
-    if (!db[id]) { db[id] = { balance: 0.0, level: 1, xp: 0, history: [] }; saveDB(); }
-    res.json(db[id]);
-});
-
-app.post('/api/play', (req, res) => {
-    const { id, bet, game } = req.body;
-    const user = db[id];
-    if (!user || user.balance < bet || bet <= 0) return res.status(400).json({ error: "Solde insuffisant" });
-
-    user.balance -= bet;
-    let win = 0;
-    let result = (game === 'dice') ? Math.floor(Math.random() * 6) + 1 : 
-                 [1, 2, 3].map(() => ['💎', '🌟', '🍒', '7️⃣'][Math.floor(Math.random() * 4)]);
-
-    if (game === 'dice' && result >= 4) win = bet * 1.9;
-    else if (game === 'slots' && result[0] === result[1] && result[1] === result[2]) win = bet * 5;
-
-    user.balance += win;
-    user.xp += 10;
-    saveDB();
-    res.json({ result, win, balance: user.balance });
-});
-
-// --- DÉPÔTS (TON/USDT/STARS) ---
 app.post('/api/deposit', async (req, res) => {
     const { id, asset, amount, platform } = req.body;
-    if (amount < LIMITS.DEP[asset]) return res.json({ success: false, message: "Sous le minimum" });
+    if (amount < LIMITS.DEP[asset]) return res.json({ success: false, message: `Min: ${LIMITS.DEP[asset]} ${asset}` });
 
     try {
         let url = "";
         if (asset === 'STARS') {
             const r = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
-                title: "Recharge Casino", description: "Achat de crédits", payload: id.toString(),
+                title: "Recharge Casino", description: "Crédits", payload: id.toString(),
                 currency: "XTR", prices: [{ label: "Stars", amount: parseInt(amount) }]
             });
             url = r.data.result;
         } else if (platform === 'XROCKET') {
             const r = await axios.post('https://pay.ton-rocket.com/tg-invoices', {
-                amount: parseFloat(amount), currency: asset, description: `ID ${id}`
+                amount: parseFloat(amount), currency: asset, description: `ID ${id}`,
+                callback_url: `https://mon-spins-bot.onrender.com/webhook/xrocket`
             }, { headers: { 'Rocket-Pay-API-Token': XROCKET_TOKEN } });
             url = r.data.result.link;
         } else {
@@ -108,7 +51,7 @@ app.post('/api/deposit', async (req, res) => {
     } catch (e) { res.json({ success: false, message: "Erreur API" }); }
 });
 
-// --- WEBHOOKS TIERS ---
+// Webhook CryptoBot
 app.post('/webhook/cryptopay', (req, res) => {
     const { payload, amount, asset, status } = req.body.update_item || {};
     if (status === 'paid' && db[payload]) {
@@ -119,4 +62,59 @@ app.post('/webhook/cryptopay', (req, res) => {
     res.sendStatus(200);
 });
 
-app.listen(3000, () => console.log("Serveur 100% prêt sur port 3000"));
+// --- GESTION DES RETRAITS (WITHDRAW) ---
+
+app.post('/api/withdraw', async (req, res) => {
+    const { id, asset, amount, address, name } = req.body;
+    if (!db[id] || db[id].balance < amount) return res.json({ success: false, message: "Solde insuffisant" });
+    if (amount < LIMITS.WIT[asset]) return res.json({ success: false, message: `Min Retrait: ${LIMITS.WIT[asset]}` });
+
+    db[id].balance -= amount;
+    db[id].history.unshift({ type: 'Retrait ⏳', amount, asset, date: 'En cours' });
+    saveDB();
+
+    // Alerte Admin
+    const text = `🏦 *RETRAIT DEMANDÉ*\n👤: ${name} (${id})\n💰: ${amount} ${asset}\n📍: \`${address}\``;
+    axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: ADMIN_ID, text, parse_mode: 'Markdown' });
+
+    res.json({ success: true, message: "Demande envoyée à l'admin !" });
+});
+
+// --- JEUX : SLOTS, DICE & MINES ---
+
+app.post('/api/play', (req, res) => {
+    const { id, bet, game, minesCount } = req.body;
+    const user = db[id];
+    if (!user || user.balance < bet || bet <= 0) return res.status(400).json({ error: "Solde insuffisant" });
+
+    user.balance -= bet;
+    let win = 0;
+    let result;
+
+    if (game === 'slots') {
+        const symbols = ['💎', '🌟', '🍒', '7️⃣'];
+        result = [symbols[Math.floor(Math.random()*4)], symbols[Math.floor(Math.random()*4)], symbols[Math.floor(Math.random()*4)]];
+        if (result[0] === result[1] && result[1] === result[2]) win = bet * 7;
+    } else if (game === 'dice') {
+        result = Math.floor(Math.random() * 6) + 1;
+        if (result >= 4) win = bet * 1.9;
+    } else if (game === 'mines') {
+        // Logique simplifiée : plus il y a de mines, plus on gagne si on survit
+        const isHit = Math.random() < (minesCount / 10); 
+        result = isHit ? "💥 BOMB" : "💎 SAFE";
+        if (!isHit) win = bet * (1 + (minesCount * 0.2));
+    }
+
+    user.balance += win;
+    user.xp += 10;
+    saveDB();
+    res.json({ result, win, balance: user.balance });
+});
+
+app.post('/api/user-data', (req, res) => {
+    const { id } = req.body;
+    if (!db[id]) { db[id] = { balance: 0.0, level: 1, xp: 0, history: [] }; saveDB(); }
+    res.json(db[id]);
+});
+
+app.listen(3000);
