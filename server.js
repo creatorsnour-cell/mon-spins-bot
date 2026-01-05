@@ -10,7 +10,7 @@ app.use(express.static(__dirname));
 const BOT_TOKEN = '8524606829:AAGIeB1RfnpsMvkNgfZiTi2R1bBf3cU8IgA';
 const CRYPTO_TOKEN = '510532:AAU6L9GFAuEs020tGnbJfSKOEPBDIkHmaAD';
 const XROCKET_TOKEN = '49264a863b86fa1418a0a3969';
-const ADMIN_ID = '7019851823'; // Ton ID (Adseur)
+const ADMIN_ID = '7019851823';
 const CHANNEL_ID = '@starrussi'; 
 
 const DB_FILE = './database.json';
@@ -22,99 +22,121 @@ const LIMITS = {
     WIT: { TON: 0.5, USDT: 0.5 }
 };
 
-// --- LOGIQUE DES TÂCHES & PROMOTION ---
+// --- GESTION DES PAIEMENTS ÉTOILES (TELEGRAM STARS) ---
+// Répondre au pre_checkout_query pour valider l'achat sans bug
+app.post('/webhook/telegram', async (req, res) => {
+    const update = req.body;
+    if (update.pre_checkout_query) {
+        await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
+            pre_checkout_query_id: update.pre_checkout_query.id,
+            ok: true
+        });
+    }
+    if (update.message && update.message.successful_payment) {
+        const uid = update.message.successful_payment.invoice_payload;
+        const amount = update.message.successful_payment.total_amount;
+        if (db[uid]) {
+            db[uid].balance += amount; // 1 Star = 1 Crédit
+            saveDB();
+        }
+    }
+    res.sendStatus(200);
+});
+
+// --- DÉPÔTS TON & USDT ---
+app.post('/api/deposit', async (req, res) => {
+    const { id, asset, amount, platform } = req.body;
+    if (amount < LIMITS.DEP[asset]) return res.json({ success: false, message: "Montant trop faible" });
+    try {
+        let url = "";
+        if (asset === 'STARS') {
+            const r = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
+                title: "Dépôt Stars", description: "Recharge Casino", payload: id.toString(),
+                currency: "XTR", prices: [{ label: "Stars", amount: parseInt(amount) }]
+            });
+            url = r.data.result;
+        } else if (platform === 'XROCKET') {
+            const r = await axios.post('https://pay.ton-rocket.com/tg-invoices', {
+                amount: parseFloat(amount), currency: asset, description: `ID ${id}`
+            }, { headers: { 'Rocket-Pay-API-Token': XROCKET_TOKEN } });
+            url = r.data.result.link;
+        } else {
+            const r = await axios.post('https://pay.crypt.bot/api/createInvoice', {
+                asset, amount: amount.toString(), payload: id.toString()
+            }, { headers: { 'Crypto-Pay-API-Token': CRYPTO_TOKEN } });
+            url = r.data.result.pay_url;
+        }
+        res.json({ success: true, url });
+    } catch (e) { res.json({ success: false, message: "Erreur API" }); }
+});
+
+// --- RETRAITS (WITHDRAW) ---
+app.post('/api/withdraw', async (req, res) => {
+    const { id, asset, amount, address, platform } = req.body;
+    if (!db[id] || db[id].balance < amount) return res.json({ success: false, message: "Solde insuffisant" });
+    if (amount < LIMITS.WIT[asset]) return res.json({ success: false, message: "Minimum non atteint" });
+
+    db[id].balance -= amount;
+    saveDB();
+    const text = `⚠️ RETRAIT: ${amount} ${asset} via ${platform} pour ${id}\nAddr: ${address}`;
+    axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: ADMIN_ID, text });
+    res.json({ success: true, message: "Demande envoyée." });
+});
+
+// --- RECTIFICATION TÂCHE (ABONNEMENT) ---
 app.post('/api/check-task', async (req, res) => {
     const { id } = req.body;
-    const user = db[id];
-
-    // Exception Administrateur (Adseur)
-    if (id.toString() === ADMIN_ID) {
-        if (user) { user.balance += 0.05; user.taskDone = true; saveDB(); }
-        return res.json({ success: true, message: "Accès Admin : Tâche validée gratuitement !" });
+    if (id.toString() === ADMIN_ID) { // Exception Adseur
+        if(db[id]) { db[id].balance += 0.05; db[id].taskDone = true; saveDB(); }
+        return res.json({ success: true, message: "Admin: +0.05 TON offert" });
     }
-
-    if (!user || user.taskDone) return res.json({ success: false, message: "Déjà récupéré ou utilisateur inconnu." });
-
     try {
-        const response = await axios.get(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember`, {
+        const r = await axios.get(`https://api.telegram.org/bot${BOT_TOKEN}/getChatMember`, {
             params: { chat_id: CHANNEL_ID, user_id: id }
         });
-        const status = response.data.result.status;
-        const isMember = ['member', 'administrator', 'creator'].includes(status);
-
-        if (isMember) {
-            user.balance += 0.05;
-            user.taskDone = true;
-            saveDB();
-            res.json({ success: true, message: "Bravo ! +0.05 TON ajoutés." });
-        } else {
-            res.json({ success: false, message: "Erreur : Vous n'êtes pas abonné au canal @starrussi." });
-        }
-    } catch (e) {
-        res.json({ success: false, message: "Le bot doit être admin du canal pour vérifier." });
-    }
+        const status = r.data.result.status;
+        if (['member', 'administrator', 'creator'].includes(status)) {
+            if (!db[id].taskDone) {
+                db[id].balance += 0.05;
+                db[id].taskDone = true;
+                saveDB();
+                res.json({ success: true, message: "0.05 TON ajoutés !" });
+            } else { res.json({ success: false, message: "Déjà fait !" }); }
+        } else { res.json({ success: false, message: "Abonnez-vous d'abord !" }); }
+    } catch (e) { res.json({ success: false, message: "Erreur vérification." }); }
 });
 
-app.post('/api/promote-channel', async (req, res) => {
-    const { id, channelLink } = req.body;
-    const user = db[id];
-    const cost = 1.0; // 1 TON pour 1k abonnés
-
-    if (id.toString() === ADMIN_ID) {
-        axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { chat_id: ADMIN_ID, text: `📢 PROMO ADMIN: ${channelLink}` });
-        return res.json({ success: true, message: "Promotion admin enregistrée !" });
-    }
-
-    if (!user || user.balance < cost) return res.json({ success: false, message: "Solde insuffisant (1 TON requis)." });
-
-    user.balance -= cost;
-    saveDB();
-    axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { 
-        chat_id: ADMIN_ID, 
-        text: `📢 NOUVELLE PROMO\nClient: ${id}\nLien: ${channelLink}\nMontant: 1 TON` 
-    });
-    res.json({ success: true, message: "Promotion soumise à l'admin !" });
-});
-
-// --- JEUX (SLOTS, MINES, DICE) ---
+// --- JEUX ALÉATOIRES (SLOTS, DICE, MINES) ---
 app.post('/api/play', (req, res) => {
     const { id, bet, game, minesCount } = req.body;
     const user = db[id];
-    const isAdmin = id.toString() === ADMIN_ID;
+    if (id.toString() !== ADMIN_ID && (!user || user.balance < bet)) return res.json({ error: "Solde bas" });
 
-    if (!isAdmin && (!user || user.balance < bet || bet <= 0)) return res.status(400).json({ error: "Solde insuffisant" });
-
-    if (!isAdmin) user.balance -= bet;
+    if (id.toString() !== ADMIN_ID) user.balance -= bet;
     let win = 0;
-    let result;
+    let multipliers = [2, 4, 5, 6, 7, 10]; // Multiplicateurs demandés
+    let mult = multipliers[Math.floor(Math.random() * multipliers.length)];
 
     if (game === 'slots') {
-        const s = ['💎','🌟','🍒','7️⃣'];
-        result = [s[Math.floor(Math.random()*4)], s[Math.floor(Math.random()*4)], s[Math.floor(Math.random()*4)]];
-        if (result[0]===result[1] && result[1]===result[2]) win = bet * 7;
+        const isWin = Math.random() < 0.3; // 30% chance
+        win = isWin ? bet * mult : 0;
     } else if (game === 'dice') {
         const val = Math.floor(Math.random() * 6) + 1;
-        result = `🎲 ${val}`;
-        if (val >= 4) win = bet * 1.9; //
+        win = (val >= 4) ? bet * 2 : 0;
     } else if (game === 'mines') {
         const hit = Math.random() < (minesCount / 10);
-        result = hit ? "💥 BOMB" : "💎 SAFE";
-        if (!hit) win = bet * (1 + (minesCount * 0.3));
+        win = !hit ? bet * (1 + (minesCount * 0.5)) : 0;
     }
 
     user.balance += win;
     saveDB();
-    res.json({ result, win, balance: user.balance });
+    res.json({ win, balance: user.balance });
 });
 
-// --- DÉPÔTS / RETRAITS / USER ---
 app.post('/api/user-data', (req, res) => {
     const { id } = req.body;
-    if (!db[id]) { db[id] = { balance: 0.0, taskDone: false, history: [] }; saveDB(); }
+    if (!db[id]) { db[id] = { balance: 0.0, taskDone: false }; saveDB(); }
     res.json(db[id]);
 });
-
-app.post('/api/deposit', async (req, res) => { /* Code identique au précédent pour Crypto/Stars/Rocket */ });
-app.post('/api/withdraw', async (req, res) => { /* Code identique au précédent pour l'admin alert */ });
 
 app.listen(3000);
