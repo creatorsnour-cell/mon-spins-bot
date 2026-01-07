@@ -1,33 +1,69 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Starrussi Casino</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --primary: #00d2ff; --bg: #05070a; --card: #10141d; --text: #ffffff; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; text-align: center; margin: 0; padding-bottom: 50px;}
-        .card { background: var(--card); border-radius: 24px; padding: 20px; margin: 12px; border: 1px solid rgba(255,255,255,0.05); }
-        .balance-label { font-size: 12px; opacity: 0.5; text-transform: uppercase; }
-        .balance-val { font-size: 48px; font-weight: 800; color: white; margin: 5px 0; }
-        .currency { color: #00ff88; font-size: 18px; }
+        /* BASE THEME */
+        :root { 
+            --primary: #00d2ff; 
+            --win: #00ff88;
+            --loss: #ff4444;
+            --bg: #05070a; 
+            --card: #10141d; 
+            --text: #ffffff; 
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; text-align: center; margin: 0; padding-bottom: 50px; }
         
-        .nav { display: flex; background: #161b26; margin: 15px; border-radius: 16px; padding: 4px; }
-        .nav div { flex: 1; padding: 12px; font-size: 12px; font-weight: 700; cursor: pointer; border-radius: 12px; transition: 0.3s; opacity: 0.4; text-transform: uppercase;}
-        .nav .active { background: #232a3b; color: white; opacity: 1; }
+        /* HEADER & BALANCE */
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin: 15px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .balance-label { font-size: 11px; opacity: 0.5; letter-spacing: 1px; font-weight: 700; }
+        .balance-val { font-size: 48px; font-weight: 800; color: var(--text); margin: 5px 0; text-shadow: 0 0 20px rgba(0, 210, 255, 0.3); }
+        .currency { color: var(--primary); font-size: 20px; }
 
-        .btn { background: #00ffa3; color: #000; border: none; padding: 16px; width: 100%; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer; margin: 8px 0; }
-        .btn-outline { background: transparent; border: 1.5px solid #232a3b; color: white; }
+        /* NAVIGATION */
+        .nav { display: flex; background: #161b26; margin: 15px; border-radius: 16px; padding: 4px; }
+        .nav div { flex: 1; padding: 12px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 12px; transition: 0.3s; opacity: 0.5; }
+        .nav .active { background: #232a3b; color: var(--primary); opacity: 1; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+
+        /* GAME AREA */
+        .display { font-size: 64px; height: 100px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+        .anim-spin { animation: spin 0.5s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+        @keyframes spin { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 0.8; } }
+
+        /* INPUTS */
+        .input-group { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; }
+        input { background: #161b26; border: 1px solid #232a3b; color: white; padding: 16px; border-radius: 14px; width: 100%; font-size: 18px; text-align: center; font-weight: bold; outline: none; }
+        input:focus { border-color: var(--primary); }
         
-        .display { font-size: 80px; height: 120px; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-        input { background: #161b26; border: 1px solid #232a3b; color: white; padding: 16px; border-radius: 14px; width: 85%; font-size: 18px; margin-bottom: 10px; text-align: center; font-weight: bold;}
-        .section-title { text-align: left; font-size: 11px; font-weight: 700; color: #4e5666; margin: 20px 20px 5px; text-transform: uppercase; }
+        /* BUTTONS */
+        .btn { background: var(--win); color: #000; border: none; padding: 18px; width: 100%; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer; transition: 0.2s; text-transform: uppercase; box-shadow: 0 0 15px rgba(0, 255, 136, 0.2); }
+        .btn:active { transform: scale(0.97); }
+        .btn-red { background: var(--loss); box-shadow: 0 0 15px rgba(255, 68, 68, 0.2); color: white; }
+        .btn-outline { background: transparent; border: 2px solid #232a3b; color: white; box-shadow: none; }
+        
+        /* MINES SELECTOR */
+        .mines-ctrl { display: flex; align-items: center; justify-content: space-between; background: #161b26; padding: 10px 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #232a3b; }
+        .mines-val { font-weight: bold; font-size: 18px; color: var(--primary); }
+
+        /* HISTORY */
+        .section-title { text-align: left; font-size: 12px; font-weight: 700; color: #6e7686; margin: 25px 20px 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .hist-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+        .hist-item:last-child { border-bottom: none; }
+        .h-win { color: var(--win); }
+        .h-loss { color: var(--loss); }
+        .h-time { opacity: 0.4; font-size: 11px; }
+
+        /* MODALS (Simple Prompt Style) */
+        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     </style>
 </head>
 <body>
 
 <div style="padding-top: 20px;">
-    <div class="balance-label">Total Balance</div>
+    <div class="balance-label">TOTAL BALANCE</div>
     <div class="balance-val"><span id="bal">0.00</span> <span class="currency">TON</span></div>
 </div>
 
@@ -35,93 +71,218 @@
     <div id="t-slots" class="active" onclick="setG('slots')">Slots</div>
     <div id="t-dice" onclick="setG('dice')">Dice</div>
     <div id="t-mines" onclick="setG('mines')">Mines</div>
-    <div id="t-tasks" onclick="setG('tasks')">Earn</div>
+    <div id="t-earn" onclick="setG('earn')">Earn</div>
 </div>
 
 <div id="game-zone" class="card">
+    
     <div id="display" class="display">🎰</div>
-    <div id="m-opt" style="display:none; margin-bottom: 10px;">
-        <span style="font-size: 12px; opacity: 0.6;">Mines Amount (1-9)</span><br>
-        <input type="number" id="mCount" value="3" min="1" max="9" style="width: 100px; margin-top: 5px;">
+    
+    <div id="m-opt" style="display:none;">
+        <div class="mines-ctrl">
+            <span style="font-size:12px; opacity:0.6;">MINES AMOUNT</span>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="range" id="mCountRange" min="1" max="24" value="3" oninput="updateMines(this.value)" style="width: 100px;">
+                <span id="mCountDisplay" class="mines-val">3</span>
+            </div>
+        </div>
     </div>
-    <input type="number" id="bet" placeholder="Enter Wager">
-    <button class="btn" onclick="playGame()">PLAY NOW</button>
+
+    <div class="input-group">
+        <input type="number" id="bet" placeholder="Mise (ex: 1)" value="1">
+    </div>
+
+    <button id="playBtn" class="btn" onclick="playGame()">PLAY</button>
 </div>
 
-<div id="task-zone" class="card" style="display:none;">
-    <h3>🎁 Daily Bonus</h3>
-    <p style="font-size:13px; opacity:0.6;">Join @starrussi to claim 0.05 TON.</p>
-    <button class="btn" onclick="tg.openTelegramLink('https://t.me/starrussi')">JOIN CHANNEL</button>
-    <button class="btn btn-outline" onclick="verify()">VERIFY (DONE)</button>
+<div id="earn-zone" style="display:none;">
+    <div class="card">
+        <h3>🎁 Tâche Quotidienne</h3>
+        <p style="font-size:12px; opacity:0.6; margin-bottom:15px;">Rejoins le canal pour gagner 0.50 TON.</p>
+        <button class="btn btn-outline" onclick="tg.openTelegramLink('https://t.me/starrussi')">REJOINDRE</button>
+        <button class="btn" style="margin-top:10px;" onclick="verifyTask()">VÉRIFIER</button>
+    </div>
+
+    <div class="section-title">Recharge (Dépôt)</div>
+    <div class="card actions-grid">
+        <button class="btn" style="background:#ffbc00; color:black;" onclick="openP('STARS','DEP','TELEGRAM')">⭐ STARS</button>
+        <button class="btn btn-outline" onclick="openP('TON','DEP','XROCKET')">🚀 xRocket</button>
+        <button class="btn btn-outline" onclick="openP('USDT','DEP','CRYPTOBOT')">🤖 CryptoBot</button>
+        <button class="btn btn-outline" onclick="openP('TON','DEP','CRYPTOBOT')">🤖 CB TON</button>
+    </div>
+
+    <div class="section-title">Retrait</div>
+    <div class="card actions-grid">
+        <button class="btn btn-red" onclick="openP('TON','WIT','XROCKET')">xRocket</button>
+        <button class="btn btn-red" onclick="openP('TON','WIT','CRYPTOBOT')">CryptoBot</button>
+    </div>
 </div>
 
-<div class="section-title">Deposit</div>
-<div class="card" style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-    <button class="btn" style="background:#ffbc00; grid-column: span 2;" onclick="openP('STARS','DEP')">⭐ DEPOSIT STARS</button>
-    <button class="btn btn-outline" onclick="openP('TON','DEP','XROCKET')">xRocket</button>
-    <button class="btn btn-outline" onclick="openP('TON','DEP','CRYPTOBOT')">CryptoBot</button>
-</div>
-
-<div class="section-title">Withdraw</div>
-<div class="card" style="display:flex; gap:10px;">
-    <button class="btn" style="background:#ff4444; color:white;" onclick="openP('TON', 'WIT', 'XROCKET')">X-ROCKET</button>
-    <button class="btn" style="background:#ff4444; color:white;" onclick="openP('TON', 'WIT', 'CRYPTOBOT')">CRYPTOBOT</button>
+<div class="section-title">RECENT TRANSACTIONS</div>
+<div class="card" id="history-list">
+    <div style="opacity:0.3; font-size:12px;">No activity yet</div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    const uid = tg.initDataUnsafe.user?.id || 7019851823;
+    tg.expand(); // Full screen
+    
+    // ID Utilisateur (fallback pour test browser)
+    const uid = tg.initDataUnsafe.user?.id || 7019851823; 
+    
     let curG = 'slots';
 
-    async function sync() {
-        const r = await fetch('/api/user-data', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
-        const d = await r.json(); document.getElementById('bal').innerText = d.balance.toFixed(2);
+    // Mise à jour de l'affichage Mines
+    function updateMines(val) {
+        document.getElementById('mCountDisplay').innerText = val;
     }
 
+    // --- NAVIGATION ---
     function setG(g) {
         curG = g;
+        // Update tabs
         document.querySelectorAll('.nav div').forEach(d => d.classList.remove('active'));
-        document.getElementById('t-'+g).classList.add('active');
-        document.getElementById('game-zone').style.display = (g === 'tasks') ? 'none' : 'block';
-        document.getElementById('task-zone').style.display = (g === 'tasks') ? 'block' : 'none';
+        document.getElementById(g === 'earn' ? 't-earn' : 't-'+g).classList.add('active');
+
+        // Toggle Zones
+        const isGame = (g !== 'earn');
+        document.getElementById('game-zone').style.display = isGame ? 'block' : 'none';
+        document.getElementById('earn-zone').style.display = isGame ? 'none' : 'block';
+
+        // Game Specifics
         document.getElementById('m-opt').style.display = (g === 'mines') ? 'block' : 'none';
-        document.getElementById('display').innerText = (g==='slots')?'🎰':(g==='dice')?'🎲':'💎';
+        
+        const disp = document.getElementById('display');
+        if(g === 'slots') disp.innerText = '🎰 🎰 🎰';
+        if(g === 'dice') disp.innerText = '🎲';
+        if(g === 'mines') disp.innerText = '💎';
     }
 
+    // --- SYNCHRONISATION DATA ---
+    async function sync() {
+        try {
+            const r = await fetch('/api/user-data', { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({id:uid}) 
+            });
+            const d = await r.json();
+            
+            // Update Balance
+            document.getElementById('bal').innerText = d.balance.toFixed(2);
+            
+            // Update History
+            const list = document.getElementById('history-list');
+            if(d.history && d.history.length > 0) {
+                list.innerHTML = d.history.map(h => {
+                    const colorClass = h.type === 'win' || h.type === 'deposit' ? 'h-win' : 'h-loss';
+                    const sign = h.type === 'win' || h.type === 'deposit' ? '+' : '';
+                    return `
+                        <div class="hist-item">
+                            <div>${h.detail} <div class="h-time">${h.time}</div></div>
+                            <div class="${colorClass}">${sign}${h.amount.toFixed(2)}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    // --- JEU ---
     async function playGame() {
         const bet = parseFloat(document.getElementById('bet').value);
-        if(!bet || bet <= 0) return tg.showAlert("Enter a valid amount");
+        if(!bet || bet <= 0) return tg.showAlert("Mise invalide !");
+
+        const disp = document.getElementById('display');
+        const btn = document.getElementById('playBtn');
         
-        const r = await fetch('/api/play', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, bet, game:curG, minesCount: parseInt(document.getElementById('mCount').value)})
-        });
-        const d = await r.json();
-        
-        if(d.error) return tg.showAlert(d.error);
-        
-        document.getElementById('display').innerText = Array.isArray(d.result) ? d.result.join('') : (curG==='dice' ? '🎲 '+d.result : d.result);
-        if(d.win > 0) tg.showAlert("WINNER! +"+d.win.toFixed(2)+" TON");
-        sync();
+        // Animation Start
+        disp.classList.add('anim-spin');
+        btn.disabled = true;
+        btn.style.opacity = 0.7;
+
+        try {
+            const minesC = parseInt(document.getElementById('mCountRange').value);
+            const r = await fetch('/api/play', {
+                method:'POST', 
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({id:uid, bet, game:curG, minesCount: minesC})
+            });
+            const d = await r.json();
+
+            setTimeout(() => {
+                disp.classList.remove('anim-spin');
+                btn.disabled = false;
+                btn.style.opacity = 1;
+
+                if(d.error) return tg.showAlert(d.error);
+
+                // Affichage Résultat
+                if (curG === 'slots' && Array.isArray(d.result)) {
+                    disp.innerText = d.result.join(' ');
+                } else {
+                    disp.innerText = d.result;
+                }
+
+                if(d.win > 0) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                    // Petit effet visuel
+                    disp.style.transform = "scale(1.2)";
+                    setTimeout(()=>disp.style.transform="scale(1)", 200);
+                } else {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+
+                sync(); // Refresh solde et historique
+            }, 600); // Délai pour l'animation
+
+        } catch(e) {
+            btn.disabled = false;
+            disp.classList.remove('anim-spin');
+        }
     }
 
-    async function verify() {
-        const r = await fetch('/api/check-task', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
-        const d = await r.json(); tg.showAlert(d.message); sync();
+    // --- PAIEMENTS & TASKS ---
+    async function verifyTask() {
+        const r = await fetch('/api/check-task', { 
+            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) 
+        });
+        const d = await r.json();
+        tg.showAlert(d.message);
+        sync();
     }
 
     async function openP(asset, mode, platform) {
-        const amt = prompt("Enter Amount:");
-        if(!amt) return;
-        const res = await fetch(mode==='DEP'?'/api/deposit':'/api/withdraw', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, asset, amount:amt, platform})
-        });
-        const d = await res.json();
-        if(d.url) tg.openTelegramLink(d.url); else tg.showAlert(d.message);
-        sync();
+        const amt = prompt(mode === 'DEP' ? `Montant à déposer (${asset}) :` : `Montant à retirer (${asset}) :`);
+        if(!amt || isNaN(amt)) return;
+
+        tg.MainButton.showProgress();
+        try {
+            const res = await fetch(mode==='DEP'?'/api/deposit':'/api/withdraw', {
+                method:'POST', 
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({id:uid, asset, amount:amt, platform})
+            });
+            const d = await res.json();
+            tg.MainButton.hideProgress();
+
+            if(d.url) {
+                tg.openTelegramLink(d.url);
+            } else {
+                tg.showAlert(d.message);
+            }
+            sync();
+        } catch(e) {
+            tg.MainButton.hideProgress();
+            tg.showAlert("Erreur connexion.");
+        }
     }
+
+    // Init
     sync();
+    // Refresh auto toutes les 10s pour voir les dépôts
+    setInterval(sync, 10000);
+
 </script>
 </body>
 </html>
