@@ -17,123 +17,134 @@ const CONFIG = {
     CHANNEL_ID: '@starrussi'
 };
 
-const DB_FILE = './database.json';
-
-// --- LIMITES (TES RÈGLES) ---
-const LIMITS = {
-    DEP: { 
-        STARS: 1,   // Min 1 Star
-        TON: 0.2,   // Min 0.2 TON (Ta demande)
-        USDT: 0.1 
-    },
-    WIT: { 
-        TON: 2.0,   // Min 2 TON pour retrait (Ta demande)
-        USDT: 2.0 
-    },
-    BONUS: 0.05     // Gain abonnement chaîne (Ta demande)
+// --- RÈGLES ET LIMITES ---
+const RULES = {
+    MIN_WITHDRAW_TON: 2.0,    //
+    MIN_DEPOSIT_TON: 0.2,     //
+    BONUS_TASK: 0.05,         // Gain abonnement chaîne
+    REFERRAL_REWARD: 0.01     // Gain par ami invité
 };
+
+const DB_FILE = './database.json';
 
 // --- BASE DE DONNÉES ---
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
 const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-const initUser = (id) => {
+const initUser = (id, referrerId = null) => {
     if (!db[id]) {
-        db[id] = { balance: 0.0, taskDone: false, history: [] };
+        db[id] = { 
+            balance: 0.0, 
+            taskDone: false, 
+            history: [], 
+            referrer: referrerId,
+            referralCount: 0 
+        };
+        // Bonus Parrainage
+        if (referrerId && db[referrerId]) {
+            db[referrerId].balance += RULES.REFERRAL_REWARD;
+            db[referrerId].referralCount += 1;
+            addHistory(referrerId, 'deposit', RULES.REFERRAL_REWARD, "Bonus Parrainage");
+        }
         saveDB();
     }
     return db[id];
 };
 
 const addHistory = (id, type, amount, detail) => {
-    const user = initUser(id);
-    user.history.unshift({
-        type: type,
-        amount: parseFloat(amount),
-        detail: detail,
-        time: new Date().toLocaleTimeString('fr-FR')
-    });
-    if (user.history.length > 20) user.history.pop();
-    saveDB();
+    const user = db[id];
+    if (user) {
+        user.history.unshift({
+            type: type,
+            amount: parseFloat(amount),
+            detail: detail,
+            time: new Date().toLocaleTimeString('fr-FR')
+        });
+        if (user.history.length > 20) user.history.pop();
+        saveDB();
+    }
 };
 
-// --- ROUTES ---
+// --- ROUTES API ---
 
-// Info Utilisateur
+// 1. Initialisation
 app.post('/api/user-data', (req, res) => {
-    res.json(initUser(req.body.id));
+    const { id, referrerId } = req.body;
+    res.json(initUser(id, referrerId));
 });
 
-// LOGIQUE JEU (Dés x3, etc.)
+// 2. Logique de Jeu (Dés x3, Slots x3, Mines)
 app.post('/api/play', (req, res) => {
-    const { id, bet, game, minesCount } = req.body;
+    const { id, bet, game, minesCount, isDemo } = req.body;
     const user = initUser(id);
     const wager = parseFloat(bet);
 
-    if (id.toString() !== CONFIG.ADMIN_ID && user.balance < wager) {
+    if (!isDemo && id.toString() !== CONFIG.ADMIN_ID && user.balance < wager) {
         return res.json({ error: "Solde insuffisant" });
     }
 
-    if (id.toString() !== CONFIG.ADMIN_ID) user.balance -= wager;
+    if (!isDemo && id.toString() !== CONFIG.ADMIN_ID) {
+        user.balance -= wager;
+    }
 
     let winAmount = 0;
     let resultDisplay = "";
     let isWin = false;
 
-    // JEU DÉS : 1-3 Perd | 4-6 Gagne x3
+    // Dés : 1-3 Perd | 4-6 Gagne x3
     if (game === 'dice') {
         const roll = Math.floor(Math.random() * 6) + 1;
         resultDisplay = roll;
-        if (roll >= 4) {
-            isWin = true;
-            winAmount = wager * 3;
-        }
+        if (roll >= 4) { isWin = true; winAmount = wager * 3; }
     } 
-    // SLOTS : 50% chance de gagner x3
+    // Slots : 50% de chance de gagner x3
     else if (game === 'slots') {
-        const symbols = ['🍒', '🍋', '🍇', '💎'];
-        resultDisplay = [symbols[Math.floor(Math.random()*4)], symbols[Math.floor(Math.random()*4)], symbols[Math.floor(Math.random()*4)]];
         if (Math.random() > 0.5) {
-            isWin = true;
-            winAmount = wager * 3;
-            resultDisplay = ['💎', '💎', '💎']; // Visuel gagnant
+            isWin = true; winAmount = wager * 3;
+            resultDisplay = ['💎', '💎', '💎'];
+        } else {
+            resultDisplay = ['🍒', '🍋', '🍇'];
         }
     }
-    // MINES
+    // Mines
     else if (game === 'mines') {
         const safeSpots = 25 - minesCount;
         if (Math.random() < (safeSpots / 25)) {
             isWin = true;
-            winAmount = wager * (1 + (minesCount * 0.5));
+            winAmount = wager * (1 + (minesCount * 0.4));
             resultDisplay = "💎";
         } else {
             resultDisplay = "💥";
         }
     }
 
-    if (isWin) {
-        user.balance += winAmount;
-        addHistory(id, 'win', winAmount, `Gain ${game}`);
-    } else {
-        addHistory(id, 'loss', -wager, `Perte ${game}`);
+    if (!isDemo) {
+        if (isWin) {
+            user.balance += winAmount;
+            addHistory(id, 'win', winAmount, `Gain au ${game}`);
+        } else {
+            addHistory(id, 'loss', -wager, `Perte au ${game}`);
+        }
+        saveDB();
     }
-    saveDB();
+
     res.json({ result: resultDisplay, win: winAmount, balance: user.balance, history: user.history });
 });
 
-// DÉPÔT
+// 3. Dépôts (Min 0.2 TON)
 app.post('/api/deposit', async (req, res) => {
     const { id, asset, amount, platform } = req.body;
-    
-    // Vérification Minimum
-    if (asset === 'TON' && parseFloat(amount) < LIMITS.DEP.TON) 
-        return res.json({ success: false, message: `Minimum Dépôt : ${LIMITS.DEP.TON} TON` });
+    const val = parseFloat(amount);
+
+    if (asset === 'TON' && val < RULES.MIN_DEPOSIT_TON) {
+        return res.json({ success: false, message: `Minimum ${RULES.MIN_DEPOSIT_TON} TON` });
+    }
 
     try {
         let url = "";
         if (asset === 'STARS') {
             const r = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/createInvoiceLink`, {
-                title: "Recharge Casino", description: `${amount} Stars`, payload: `DEP-${id}`,
+                title: "Crédit Casino", description: `${amount} Stars`, payload: `DEP-${id}`,
                 currency: "XTR", prices: [{ label: "Stars", amount: parseInt(amount) }]
             });
             url = r.data.result;
@@ -144,29 +155,27 @@ app.post('/api/deposit', async (req, res) => {
             url = r.data.result.pay_url;
         } else {
             const r = await axios.post('https://pay.ton-rocket.com/tg-invoices', {
-                amount: parseFloat(amount), currency: asset.toUpperCase(), description: `DEP:${id}`
+                amount: val, currency: asset.toUpperCase(), description: `DEP:${id}`
             }, { headers: { 'Rocket-Pay-API-Token': CONFIG.XROCKET_TOKEN } });
             url = r.data.result.link;
         }
         res.json({ success: true, url });
-    } catch (e) { res.json({ success: false, message: "Erreur API Paiement" }); }
+    } catch (e) { res.json({ success: false, message: "Erreur API" }); }
 });
 
-// RETRAIT
+// 4. Retraits (Min 2 TON)
 app.post('/api/withdraw', async (req, res) => {
     const { id, asset, amount, platform } = req.body;
     const user = initUser(id);
     const val = parseFloat(amount);
 
     if (user.balance < val) return res.json({ success: false, message: "Solde insuffisant" });
-    
-    // Vérification Minimum Retrait
-    if (asset === 'TON' && val < LIMITS.WIT.TON) 
-        return res.json({ success: false, message: `Minimum Retrait : ${LIMITS.WIT.TON} TON` });
+    if (asset === 'TON' && val < RULES.MIN_WITHDRAW_TON) {
+        return res.json({ success: false, message: `Minimum ${RULES.MIN_WITHDRAW_TON} TON` });
+    }
 
     try {
         let success = false;
-        // Ici on garde xRocket et CryptoBot
         if (platform === 'CRYPTOBOT') {
             const r = await axios.post('https://pay.crypt.bot/api/transfer', {
                 user_id: parseInt(id), asset: asset.toUpperCase(), amount: amount.toString(), spend_id: `WIT-${Date.now()}`
@@ -174,7 +183,7 @@ app.post('/api/withdraw', async (req, res) => {
             success = r.data.ok;
         } else {
             const r = await axios.post('https://pay.ton-rocket.com/app/transfer', {
-                tgUserId: parseInt(id), currency: asset.toUpperCase(), amount: parseFloat(amount)
+                tgUserId: parseInt(id), currency: asset.toUpperCase(), amount: val
             }, { headers: { 'Rocket-Pay-API-Token': CONFIG.XROCKET_TOKEN } });
             success = r.data.success;
         }
@@ -183,18 +192,18 @@ app.post('/api/withdraw', async (req, res) => {
             user.balance -= val;
             addHistory(id, 'withdraw', -val, `Retrait ${asset}`);
             saveDB();
-            res.json({ success: true, message: "Retrait envoyé !" });
+            res.json({ success: true, message: "Retrait effectué !" });
         } else {
-            res.json({ success: false, message: "Erreur technique plateforme." });
+            res.json({ success: false, message: "Erreur plateforme" });
         }
-    } catch (e) { res.json({ success: false, message: "Fonds bot insuffisants." }); }
+    } catch (e) { res.json({ success: false, message: "Fonds bot insuffisants" }); }
 });
 
-// BONUS TÂCHE
+// 5. Bonus Chaîne (0.05 TON)
 app.post('/api/check-task', async (req, res) => {
     const { id } = req.body;
     const user = initUser(id);
-    if (user.taskDone) return res.json({ success: false, message: "Déjà réclamé !" });
+    if (user.taskDone) return res.json({ success: false, message: "Déjà fait !" });
 
     try {
         const r = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getChatMember`, {
@@ -202,15 +211,30 @@ app.post('/api/check-task', async (req, res) => {
         });
         const status = r.data.result.status;
         if (['member', 'administrator', 'creator'].includes(status)) {
-            user.balance += LIMITS.BONUS; // 0.05 TON
+            user.balance += RULES.BONUS_TASK;
             user.taskDone = true;
-            addHistory(id, 'deposit', LIMITS.BONUS, "Bonus Chaîne");
+            addHistory(id, 'deposit', RULES.BONUS_TASK, "Bonus Abonnement");
             saveDB();
-            res.json({ success: true, message: `+${LIMITS.BONUS} TON ajoutés !` });
+            res.json({ success: true, message: `+${RULES.BONUS_TASK} TON reçu !` });
         } else {
             res.json({ success: false, message: "Rejoins le canal d'abord." });
         }
-    } catch (e) { res.json({ success: false, message: "Erreur vérification." }); }
+    } catch (e) { res.json({ success: false, message: "Erreur vérification" }); }
 });
 
-app.listen(3000, () => console.log("Serveur prêt sur port 3000"));
+// 6. Webhook pour les paiements automatiques
+app.post('/api/webhook/crypto', (req, res) => {
+    const { payload, amount, status } = req.body;
+    if (status === 'PAID') {
+        const userId = payload;
+        const user = db[userId];
+        if (user) {
+            user.balance += parseFloat(amount);
+            addHistory(userId, 'deposit', amount, "Dépôt validé ✅");
+            saveDB();
+        }
+    }
+    res.sendStatus(200);
+});
+
+app.listen(3000, () => console.log("Casino prêt sur le port 3000"));
