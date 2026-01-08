@@ -3,134 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>STARRUSSI WORLD</title>
+    <title>STARRUSSI NEON</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --blue: #00d2ff; --green: #00ff88; --red: #ff4444; --bg: #05070a; --card: #12161f; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 80px; }
-        .header { padding: 30px 20px; background: var(--card); border-bottom: 2px solid var(--blue); border-radius: 0 0 30px 30px; }
-        .balance { font-size: 45px; font-weight: 900; text-shadow: 0 0 15px var(--blue); }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;600&display=swap');
         
-        .main-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; }
-        .act-btn { background: #1a212e; padding: 15px; border-radius: 15px; border: 1px solid #2d3748; font-size: 11px; text-align: center; }
-        .act-btn i { font-size: 20px; display: block; margin-bottom: 8px; color: var(--blue); }
+        :root { --neon: #00f2ff; --purple: #bc13fe; --bg: #02050a; --card: #0a0f1d; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; padding-bottom: 100px; }
+        
+        .cyber-header { padding: 40px 20px; background: linear-gradient(180deg, #0a0f1d 0%, var(--bg) 100%); text-align: center; border-bottom: 1px solid var(--neon); box-shadow: 0 0 20px rgba(0,242,255,0.2); }
+        .glitch-text { font-family: 'Orbitron', sans-serif; font-size: 40px; font-weight: 900; color: var(--neon); text-shadow: 0 0 10px var(--neon); }
 
-        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; }
-        .game-card { background: var(--card); padding: 25px; border-radius: 20px; border: 1px solid #1e2533; transition: 0.3s; }
-        .game-card:active { transform: scale(0.95); background: #1e2533; }
-        .game-card i { font-size: 35px; margin-bottom: 10px; }
+        .nav-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px; }
+        .nav-card { background: var(--card); border: 1px solid #1a233a; padding: 15px 5px; border-radius: 12px; text-align: center; font-size: 10px; cursor: pointer; transition: 0.3s; }
+        .nav-card i { font-size: 20px; color: var(--neon); margin-bottom: 5px; display: block; }
+        .nav-card.active { border-color: var(--neon); box-shadow: 0 0 10px var(--neon); }
 
-        /* MODAL FOR GAMES & MENU */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; z-index: 100; }
-        .modal-body { background: #0f131a; margin: 15% 20px; padding: 30px; border-radius: 30px; border: 1px solid var(--blue); text-align: center; }
-        
-        input, select { background: #000; border: 1px solid #2d3748; color: white; padding: 15px; width: 100%; border-radius: 12px; margin: 10px 0; box-sizing: border-box; }
-        .btn-main { background: var(--blue); color: black; border: none; padding: 18px; width: 100%; border-radius: 15px; font-weight: 800; font-size: 16px; }
-        
-        .history { padding: 20px; text-align: left; }
-        .h-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #1a212e; font-size: 12px; }
+        .main-container { padding: 0 20px; animation: slideUp 0.5s ease; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; margin-bottom: 20px; }
+        .btn-action { background: linear-gradient(90deg, var(--neon), var(--purple)); color: white; border: none; padding: 18px; width: 100%; border-radius: 15px; font-family: 'Orbitron'; font-weight: bold; letter-spacing: 2px; box-shadow: 0 0 15px rgba(0,242,255,0.3); }
+
+        .game-icon { font-size: 60px; margin: 20px 0; min-height: 80px; display: flex; justify-content: center; align-items: center; }
+        .spinning { animation: hyperSpin 0.1s infinite; }
+        @keyframes hyperSpin { 0% { transform: scale(1); } 50% { transform: scale(1.1); filter: hue-rotate(90deg); } 100% { transform: scale(1); } }
+
+        /* Referral List Style */
+        .user-row { display: flex; justify-content: space-between; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 10px; margin-bottom: 8px; font-size: 12px; border-left: 3px solid var(--neon); }
+
+        /* Bottom Menu */
+        .bottom-bar { position: fixed; bottom: 0; width: 100%; background: #070a14; display: flex; justify-content: space-around; padding: 20px 0; border-top: 1px solid #1a233a; }
+        .bar-item { font-size: 12px; color: #4a5568; text-align: center; }
+        .bar-item.active { color: var(--neon); }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div style="font-size: 11px; opacity: 0.6; letter-spacing: 2px;">TOTAL BALANCE</div>
-    <div class="balance"><span id="bal">0.00</span> <small style="font-size: 16px;">TON</small></div>
+<div class="cyber-header">
+    <div style="font-size: 10px; letter-spacing: 5px; opacity: 0.6;">SYSTEM CORE BALANCE</div>
+    <div class="glitch-text" id="bal">0.00</div>
+    <div style="font-size: 12px; color: var(--purple);">TON CRYSTALS</div>
 </div>
 
-<div class="main-actions">
-    <div class="act-btn" onclick="openModal('deposit')"><i class="fas fa-plus-circle"></i> DEPOSIT</div>
-    <div class="act-btn" onclick="openModal('withdraw')"><i class="fas fa-wallet"></i> WITHDRAW</div>
-    <div class="act-btn" onclick="openModal('ref')"><i class="fas fa-users"></i> FRIENDS</div>
+<div class="nav-grid">
+    <div class="nav-card active" onclick="showTab('play')"><i class="fas fa-rocket"></i>PLAY</div>
+    <div class="nav-item" style="display:none"></div> <div class="nav-card" onclick="showTab('deposit')"><i class="fas fa-bolt"></i>LOAD</div>
+    <div class="nav-card" onclick="showTab('withdraw')"><i class="fas fa-wallet"></i>CASH</div>
+    <div class="nav-card" onclick="showTab('ref')"><i class="fas fa-users"></i>SQUAD</div>
 </div>
 
-<div class="game-grid">
-    <div class="game-card" onclick="openGame('slots')"><i class="fas fa-random" style="color: #ff4444;"></i><br>SLOTS</div>
-    <div class="game-card" onclick="openGame('dice')"><i class="fas fa-dice" style="color: var(--green);"></i><br>DICE</div>
-    <div class="game-card" onclick="openGame('mines')"><i class="fas fa-bomb" style="color: #ffcc00;"></i><br>MINES</div>
-    <div class="game-card" onclick="tg.openTelegramLink('https://t.me/starrussi')"><i class="fas fa-star"></i><br>TASKS</div>
-</div>
+<div class="main-container">
+    <div id="tab-play">
+        <div class="glass-card" style="text-align:center;">
+            <div id="display" class="game-icon">🎰</div>
+            <select id="gameSelect" style="width:100%; padding:15px; background:black; color:var(--neon); border:1px solid var(--neon); border-radius:10px; margin-bottom:15px; font-family:'Orbitron';">
+                <option value="slots">CYBER SLOTS</option>
+                <option value="dice">QUANTUM DICE</option>
+                <option value="mines">VOID MINES</option>
+            </select>
+            <input type="number" id="bet" value="0.2" style="width:100%; padding:15px; background:black; color:white; border:1px solid #333; border-radius:10px; margin-bottom:15px; box-sizing:border-box;">
+            <button class="btn-action" onclick="play()">INITIATE SPIN</button>
+        </div>
+    </div>
 
-<div id="modal" class="modal">
-    <div class="modal-body">
-        <div id="modal-content"></div>
-        <button onclick="closeModal()" style="background:none; border:none; color:gray; margin-top:20px;">Close</button>
+    <div id="tab-deposit" style="display:none;">
+        <div class="glass-card">
+            <h3>RECHARGE CORE</h3>
+            <button class="btn-action" style="margin-bottom:10px;" onclick="deposit('TON')">TON (CryptoBot)</button>
+            <button class="btn-action" style="background:var(--purple)" onclick="deposit('STARS')">STARS (Telegram)</button>
+        </div>
+    </div>
+
+    <div id="tab-withdraw" style="display:none;">
+        <div class="glass-card">
+            <h3>EXTRACTION</h3>
+            <select id="wMethod" style="width:100%; padding:15px; background:black; color:white; border-radius:10px;">
+                <option value="CRYPTOBOT">CryptoBot (1 TON min)</option>
+                <option value="AIRTEL">Airtel Money (3 TON min)</option>
+            </select>
+            <input type="text" id="wDetails" placeholder="Wallet or Phone Number" style="width:100%; padding:15px; box-sizing:border-box; margin:10px 0; background:black; border:1px solid #333; color:white; border-radius:10px;">
+            <input type="number" id="wAmt" placeholder="Amount TON" style="width:100%; padding:15px; box-sizing:border-box; background:black; border:1px solid #333; color:white; border-radius:10px;">
+            <button class="btn-action" style="margin-top:15px;" onclick="withdraw()">START EXTRACTION</button>
+        </div>
+    </div>
+
+    <div id="tab-ref" style="display:none;">
+        <div class="glass-card">
+            <h3>SQUAD LINK</h3>
+            <div id="refLink" style="font-size:10px; background:black; padding:15px; border-radius:10px; word-break:break-all; border:1px dashed var(--neon);"></div>
+            <button class="btn-action" style="margin-top:15px;" onclick="shareRef()">COPY & SHARE</button>
+        </div>
+        <div class="glass-card">
+            <h3>ACTIVE SQUAD (<span id="count">0</span>)</h3>
+            <div id="list"></div>
+        </div>
     </div>
 </div>
-
-<div class="history" id="hist-list"></div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
+    const uname = tg.initDataUnsafe.user?.first_name || "Pilot";
     const refParam = new URLSearchParams(window.location.search).get('tgWebAppStartParam');
-    let currentGame = '';
+    let link = "";
+
+    function showTab(t) {
+        document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+        document.getElementById('tab-'+t).style.display = 'block';
+        document.querySelectorAll('.nav-card').forEach(el => el.classList.remove('active'));
+        tg.HapticFeedback.impactOccurred('medium');
+    }
 
     async function sync() {
         const r = await fetch('/api/user-data', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, refId: refParam})
+            body: JSON.stringify({id:uid, username:uname, refId:refParam})
         });
         const d = await r.json();
         document.getElementById('bal').innerText = d.balance.toFixed(2);
-        window.userRefLink = d.refLink; // Store the link
+        link = d.refLink;
+        document.getElementById('refLink').innerText = link;
+        document.getElementById('count').innerText = d.invitedUsers.length;
+        document.getElementById('list').innerHTML = d.invitedUsers.map(u => `
+            <div class="user-row"><span>${u.name}</span><span>${u.date}</span></div>
+        `).join('') || "No squad members yet.";
+    }
+
+    async function play() {
+        const bet = document.getElementById('bet').value;
+        const game = document.getElementById('gameSelect').value;
+        document.getElementById('display').classList.add('spinning');
         
-        document.getElementById('hist-list').innerHTML = d.history.slice(0, 10).map(h => `
-            <div class="h-item">
-                <span>${h.detail}</span>
-                <span style="color:${h.amount>0? '#00ff88':'#ff4444'}">${h.amount>0?'+':''}${h.amount.toFixed(2)}</span>
-            </div>
-        `).join('');
-    }
-
-    function openModal(type) {
-        const content = document.getElementById('modal-content');
-        document.getElementById('modal').style.display = 'block';
+        const r = await fetch('/api/play', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:uid, bet, game, minesCount: 3})
+        });
+        const d = await r.json();
         
-        if(type === 'deposit') {
-            content.innerHTML = `<h3>Deposit</h3>
-                <select id="depAsset"><option value="TON">TON (Min 0.2)</option><option value="STARS">Stars (Min 5)</option></select>
-                <input type="number" id="depAmt" placeholder="Amount">
-                <button class="btn-main" onclick="processDeposit()">DEPOSIT NOW</button>`;
-        } else if(type === 'withdraw') {
-            content.innerHTML = `<h3>Withdraw</h3>
-                <select id="wMethod"><option value="CRYPTOBOT">CryptoBot (Min 1 TON)</option><option value="AIRTEL">Airtel Money (Min 3 TON)</option></select>
-                <input type="text" id="wDetails" placeholder="Wallet or Phone Number">
-                <input type="number" id="wAmt" placeholder="Amount">
-                <button class="btn-main" style="background:var(--red); color:white;" onclick="processWithdraw()">WITHDRAW</button>`;
-        } else if(type === 'ref') {
-            content.innerHTML = `<h3>Referral Link</h3>
-                <div style="background:#000; padding:15px; border-radius:10px; font-size:10px; word-break:break-all;">${window.userRefLink}</div>
-                <button class="btn-main" style="margin-top:15px;" onclick="tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(window.userRefLink))">SHARE LINK</button>`;
-        }
+        setTimeout(() => {
+            document.getElementById('display').classList.remove('spinning');
+            if(d.error) return tg.showAlert(d.error);
+            document.getElementById('display').innerText = Array.isArray(d.result) ? d.result.join('') : d.result;
+            tg.HapticFeedback.notificationOccurred(d.win > 0 ? 'success' : 'error');
+            sync();
+        }, 800);
     }
 
-    function openGame(game) {
-        currentGame = game;
-        const content = document.getElementById('modal-content');
-        document.getElementById('modal').style.display = 'block';
-        content.innerHTML = `<h3>${game.toUpperCase()}</h3>
-            <div id="game-disp" style="font-size:60px; margin:20px;">🎰</div>
-            ${game==='mines' ? '<input type="number" id="mCount" placeholder="Mines (1-24)" value="3">' : ''}
-            <input type="number" id="bet" value="0.2">
-            <button class="btn-main" onclick="play()">SPIN</button>`;
-    }
-
-    async function processDeposit() {
-        const asset = document.getElementById('depAsset').value;
-        const amount = document.getElementById('depAmt').value;
+    async function deposit(asset) {
+        const amt = prompt("Amount:");
         const r = await fetch('/api/deposit', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, asset, amount})
+            body: JSON.stringify({id:uid, asset, amount:amt})
         });
         const d = await r.json();
         if(d.url) tg.openTelegramLink(d.url);
-        else tg.showAlert(d.message);
     }
 
-    async function processWithdraw() {
+    async function withdraw() {
         const amount = document.getElementById('wAmt').value;
         const method = document.getElementById('wMethod').value;
         const details = document.getElementById('wDetails').value;
@@ -140,29 +172,13 @@
         });
         const d = await r.json();
         tg.showAlert(d.message);
-        closeModal();
         sync();
     }
 
-    async function play() {
-        const bet = document.getElementById('bet').value;
-        const minesCount = document.getElementById('mCount')?.value || 0;
-        document.getElementById('game-disp').classList.add('spinning');
-        
-        const r = await fetch('/api/play', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, bet, game:currentGame, minesCount})
-        });
-        const d = await r.json();
-        
-        setTimeout(() => {
-            if(d.error) return tg.showAlert(d.error);
-            document.getElementById('game-disp').innerText = Array.isArray(d.result) ? d.result.join(' ') : d.result;
-            sync();
-        }, 800);
+    function shareRef() {
+        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=Join my cyber squad!`);
     }
 
-    function closeModal() { document.getElementById('modal').style.display = 'none'; }
     sync();
 </script>
 </body>
