@@ -3,133 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>STARRUSSI PRO</title>
+    <title>STARRUSSI WORLD</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --blue: #00d2ff; --neon: #00ff88; --dark: #07090f; --glass: rgba(255,255,255,0.05); }
-        body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 100px; }
+        :root { --blue: #00d2ff; --green: #00ff88; --red: #ff4444; --bg: #05070a; --card: #12161f; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 80px; }
+        .header { padding: 30px 20px; background: var(--card); border-bottom: 2px solid var(--blue); border-radius: 0 0 30px 30px; }
+        .balance { font-size: 45px; font-weight: 900; text-shadow: 0 0 15px var(--blue); }
         
-        /* Header Card */
-        .wallet-card { background: linear-gradient(135deg, #1a202c 0%, #07090f 100%); padding: 30px; border-bottom: 2px solid var(--blue); }
-        .bal-val { font-size: 45px; font-weight: 900; letter-spacing: -1px; }
-        .token-val { color: var(--blue); font-size: 14px; opacity: 0.8; }
+        .main-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; }
+        .act-btn { background: #1a212e; padding: 15px; border-radius: 15px; border: 1px solid #2d3748; font-size: 11px; text-align: center; }
+        .act-btn i { font-size: 20px; display: block; margin-bottom: 8px; color: var(--blue); }
 
-        /* Quick Actions Menu */
-        .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 15px; }
-        .action-btn { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 15px; font-size: 11px; text-align: center; }
-        .action-btn i { font-size: 20px; display: block; margin-bottom: 5px; color: var(--blue); }
-
-        /* Game Grid */
-        .section-title { text-align: left; padding: 0 20px; font-size: 14px; font-weight: bold; text-transform: uppercase; color: #4a5568; }
-        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
-        .game-card { background: var(--glass); height: 120px; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
-        .game-card:active { transform: scale(0.95); background: rgba(0,210,255,0.1); }
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; }
+        .game-card { background: var(--card); padding: 25px; border-radius: 20px; border: 1px solid #1e2533; transition: 0.3s; }
+        .game-card:active { transform: scale(0.95); background: #1e2533; }
         .game-card i { font-size: 35px; margin-bottom: 10px; }
 
-        /* Navigation Bar */
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #0f172a; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1e293b; }
-        .nav-link { font-size: 10px; color: #64748b; text-decoration: none; }
-        .nav-link.active { color: var(--blue); }
-
-        /* Modal Overlay */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; padding-top: 50px; }
-        .modal-content { background: #1a202c; margin: 20px; padding: 25px; border-radius: 25px; border: 1px solid var(--blue); }
+        /* MODAL FOR GAMES & MENU */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: none; z-index: 100; }
+        .modal-body { background: #0f131a; margin: 15% 20px; padding: 30px; border-radius: 30px; border: 1px solid var(--blue); text-align: center; }
+        
+        input, select { background: #000; border: 1px solid #2d3748; color: white; padding: 15px; width: 100%; border-radius: 12px; margin: 10px 0; box-sizing: border-box; }
+        .btn-main { background: var(--blue); color: black; border: none; padding: 18px; width: 100%; border-radius: 15px; font-weight: 800; font-size: 16px; }
+        
+        .history { padding: 20px; text-align: left; }
+        .h-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #1a212e; font-size: 12px; }
     </style>
 </head>
 <body>
 
-<div class="wallet-card">
-    <div style="font-size: 12px; opacity: 0.5;">AVAILABLE BALANCE</div>
-    <div class="bal-val"><span id="bal">0.00</span> <small style="font-size: 18px;">TON</small></div>
-    <div class="token-val"><i class="fas fa-coins"></i> <span id="chips">50</span> TOKENS</div>
+<div class="header">
+    <div style="font-size: 11px; opacity: 0.6; letter-spacing: 2px;">TOTAL BALANCE</div>
+    <div class="balance"><span id="bal">0.00</span> <small style="font-size: 16px;">TON</small></div>
 </div>
 
-<div class="quick-actions">
-    <div class="action-btn" onclick="openDeposit()"><i class="fas fa-plus-circle"></i> DEPOSIT</div>
-    <div class="action-btn" onclick="openWithdraw()"><i class="fas fa-wallet"></i> WITHDRAW</div>
-    <div class="action-btn" onclick="showView('tasks')"><i class="fas fa-tasks"></i> TASKS</div>
+<div class="main-actions">
+    <div class="act-btn" onclick="openModal('deposit')"><i class="fas fa-plus-circle"></i> DEPOSIT</div>
+    <div class="act-btn" onclick="openModal('withdraw')"><i class="fas fa-wallet"></i> WITHDRAW</div>
+    <div class="act-btn" onclick="openModal('ref')"><i class="fas fa-users"></i> FRIENDS</div>
 </div>
 
-<div id="view-home">
-    <div class="section-title">Minigames Center</div>
-    <div class="game-grid">
-        <div class="game-card" onclick="openGame('slots')"><i class="fas fa-slot-machine" style="color: #ff4444;"></i><span>SLOTS</span></div>
-        <div class="game-card" onclick="openGame('dice')"><i class="fas fa-dice" style="color: #00ff88;"></i><span>DICE</span></div>
-        <div class="game-card" onclick="openGame('mines')"><i class="fas fa-bomb" style="color: #ffcc00;"></i><span>MINES</span></div>
-        <div class="game-card" onclick="showView('invite')"><i class="fas fa-users" style="color: #00d2ff;"></i><span>FRIENDS</span></div>
+<div class="game-grid">
+    <div class="game-card" onclick="openGame('slots')"><i class="fas fa-random" style="color: #ff4444;"></i><br>SLOTS</div>
+    <div class="game-card" onclick="openGame('dice')"><i class="fas fa-dice" style="color: var(--green);"></i><br>DICE</div>
+    <div class="game-card" onclick="openGame('mines')"><i class="fas fa-bomb" style="color: #ffcc00;"></i><br>MINES</div>
+    <div class="game-card" onclick="tg.openTelegramLink('https://t.me/starrussi')"><i class="fas fa-star"></i><br>TASKS</div>
+</div>
+
+<div id="modal" class="modal">
+    <div class="modal-body">
+        <div id="modal-content"></div>
+        <button onclick="closeModal()" style="background:none; border:none; color:gray; margin-top:20px;">Close</button>
     </div>
 </div>
 
-<div id="game-modal" class="modal">
-    <div class="modal-content">
-        <h2 id="game-title">GAME</h2>
-        <div id="game-display" style="font-size: 50px; margin: 20px 0;">🎰</div>
-        <div id="mines-config" style="display:none;">
-            Mines: <input type="range" id="mCount" min="1" max="24" value="3">
-        </div>
-        <input type="number" id="bet" value="0.2" style="width: 80%; padding: 15px; border-radius: 10px; background: #000; color: #fff; border: 1px solid #333;">
-        <button class="action-btn" style="width: 100%; margin-top: 15px; background: var(--blue); color: black;" onclick="playNow()">START SESSION</button>
-        <button onclick="closeModal()" style="background: none; border: none; color: gray; margin-top: 10px;">Close</button>
-    </div>
-</div>
-
-<div class="bottom-nav">
-    <div class="nav-link active" onclick="showView('home')"><i class="fas fa-home"></i><br>HOME</div>
-    <div class="nav-link" onclick="showView('tasks')"><i class="fas fa-bolt"></i><br>TASKS</div>
-    <div class="nav-link" onclick="showView('invite')"><i class="fas fa-user-plus"></i><br>REFER</div>
-</div>
+<div class="history" id="hist-list"></div>
 
 <script>
     const tg = window.Telegram.WebApp;
+    tg.expand();
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
+    const refParam = new URLSearchParams(window.location.search).get('tgWebAppStartParam');
     let currentGame = '';
 
-    function showView(v) {
-        tg.HapticFeedback.impactOccurred('light');
-        // Logic to switch visibility
-    }
-
-    function openGame(g) {
-        currentGame = g;
-        document.getElementById('game-modal').style.display = 'block';
-        document.getElementById('game-title').innerText = g.toUpperCase();
-        document.getElementById('mines-config').style.display = g === 'mines' ? 'block' : 'none';
-    }
-
-    function closeModal() { document.getElementById('game-modal').style.display = 'none'; }
-
     async function sync() {
-        const r = await fetch('/api/user-data', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid})});
+        const r = await fetch('/api/user-data', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:uid, refId: refParam})
+        });
         const d = await r.json();
         document.getElementById('bal').innerText = d.balance.toFixed(2);
-        document.getElementById('chips').innerText = d.chips;
+        window.userRefLink = d.refLink; // Store the link
+        
+        document.getElementById('hist-list').innerHTML = d.history.slice(0, 10).map(h => `
+            <div class="h-item">
+                <span>${h.detail}</span>
+                <span style="color:${h.amount>0? '#00ff88':'#ff4444'}">${h.amount>0?'+':''}${h.amount.toFixed(2)}</span>
+            </div>
+        `).join('');
     }
 
-    async function openDeposit() {
-        const method = prompt("Choose Method: STARS or TON").toUpperCase();
-        const amount = prompt("Enter Amount (Min 5 Stars / 0.2 TON):");
+    function openModal(type) {
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal').style.display = 'block';
+        
+        if(type === 'deposit') {
+            content.innerHTML = `<h3>Deposit</h3>
+                <select id="depAsset"><option value="TON">TON (Min 0.2)</option><option value="STARS">Stars (Min 5)</option></select>
+                <input type="number" id="depAmt" placeholder="Amount">
+                <button class="btn-main" onclick="processDeposit()">DEPOSIT NOW</button>`;
+        } else if(type === 'withdraw') {
+            content.innerHTML = `<h3>Withdraw</h3>
+                <select id="wMethod"><option value="CRYPTOBOT">CryptoBot (Min 1 TON)</option><option value="AIRTEL">Airtel Money (Min 3 TON)</option></select>
+                <input type="text" id="wDetails" placeholder="Wallet or Phone Number">
+                <input type="number" id="wAmt" placeholder="Amount">
+                <button class="btn-main" style="background:var(--red); color:white;" onclick="processWithdraw()">WITHDRAW</button>`;
+        } else if(type === 'ref') {
+            content.innerHTML = `<h3>Referral Link</h3>
+                <div style="background:#000; padding:15px; border-radius:10px; font-size:10px; word-break:break-all;">${window.userRefLink}</div>
+                <button class="btn-main" style="margin-top:15px;" onclick="tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(window.userRefLink))">SHARE LINK</button>`;
+        }
+    }
+
+    function openGame(game) {
+        currentGame = game;
+        const content = document.getElementById('modal-content');
+        document.getElementById('modal').style.display = 'block';
+        content.innerHTML = `<h3>${game.toUpperCase()}</h3>
+            <div id="game-disp" style="font-size:60px; margin:20px;">🎰</div>
+            ${game==='mines' ? '<input type="number" id="mCount" placeholder="Mines (1-24)" value="3">' : ''}
+            <input type="number" id="bet" value="0.2">
+            <button class="btn-main" onclick="play()">SPIN</button>`;
+    }
+
+    async function processDeposit() {
+        const asset = document.getElementById('depAsset').value;
+        const amount = document.getElementById('depAmt').value;
         const r = await fetch('/api/deposit', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, asset:method, amount})
+            body: JSON.stringify({id:uid, asset, amount})
         });
         const d = await r.json();
         if(d.url) tg.openTelegramLink(d.url);
+        else tg.showAlert(d.message);
     }
 
-    async function playNow() {
-        const bet = document.getElementById('bet').value;
-        const r = await fetch('/api/play', {
+    async function processWithdraw() {
+        const amount = document.getElementById('wAmt').value;
+        const method = document.getElementById('wMethod').value;
+        const details = document.getElementById('wDetails').value;
+        const r = await fetch('/api/withdraw', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, bet, game:currentGame, minesCount: document.getElementById('mCount').value})
+            body: JSON.stringify({id:uid, amount, method, details})
         });
         const d = await r.json();
-        if(d.error) return tg.showAlert(d.error);
-        
-        document.getElementById('game-display').innerText = Array.isArray(d.result) ? d.result.join(' ') : d.result;
+        tg.showAlert(d.message);
+        closeModal();
         sync();
     }
 
+    async function play() {
+        const bet = document.getElementById('bet').value;
+        const minesCount = document.getElementById('mCount')?.value || 0;
+        document.getElementById('game-disp').classList.add('spinning');
+        
+        const r = await fetch('/api/play', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:uid, bet, game:currentGame, minesCount})
+        });
+        const d = await r.json();
+        
+        setTimeout(() => {
+            if(d.error) return tg.showAlert(d.error);
+            document.getElementById('game-disp').innerText = Array.isArray(d.result) ? d.result.join(' ') : d.result;
+            sync();
+        }, 800);
+    }
+
+    function closeModal() { document.getElementById('modal').style.display = 'none'; }
     sync();
 </script>
 </body>
