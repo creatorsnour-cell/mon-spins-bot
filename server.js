@@ -12,107 +12,96 @@ const CONFIG = {
     BOT_TOKEN: '8554964276:AAFXlTNSQXWQy8RhroiqwjcqaSg7lYzY9GU',
     CRYPTO_TOKEN: '510513:AAeEQr2dTYwFbaX56NPAgZluhSt34zua2fc',
     ADMIN_ID: '7019851823',
-    CHANNEL_ID: '@starrussi',
-    BOT_USERNAME: 'Newspin_onebot'
+    BOT_USERNAME: 'Newspin_onebot',
+    TON_TO_FCFA: 1100 // Exchange rate
 };
 
 const DB_FILE = './database.json';
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
 const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-// Initialisation avec plus de champs
-const initUser = (id, referrerId = null) => {
+const initUser = (id) => {
     if (!db[id]) {
-        db[id] = { 
-            balance: 0.10, 
-            invitedCount: 0,
-            totalPlayed: 0,
-            taskDone: false, 
-            history: [{type: 'bonus', amount: 0.10, detail: '🎁 Welcome Gift', time: new Date().toLocaleString()}] 
-        };
-        if (referrerId && db[referrerId]) {
-            db[referrerId].balance += 0.02;
-            db[referrerId].invitedCount += 1;
-            db[referrerId].history.unshift({type: 'ref', amount: 0.02, detail: '👥 New Referral', time: new Date().toLocaleString()});
-        }
+        db[id] = { balance: 0.1, history: [] };
         saveDB();
     }
     return db[id];
 };
 
-// --- LOGIQUE DES JEUX AMÉLIORÉE ---
-app.post('/api/play', (req, res) => {
-    const { id, bet, game, minesCount } = req.body;
+// --- PAYMENT ENDPOINTS ---
+
+app.post('/api/deposit', async (req, res) => {
+    const { id, asset, amount } = req.body;
+    
+    // Limits
+    if (asset === 'STARS' && amount < 5) return res.json({ success: false, message: "Min 5 Stars" });
+    if (asset === 'TON' && amount < 0.2) return res.json({ success: false, message: "Min 0.2 TON" });
+
+    try {
+        if (asset === 'STARS') {
+            const r = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/createInvoiceLink`, {
+                title: "Casino Credits",
+                description: `Deposit ${amount} Stars`,
+                payload: `STARS_${id}_${Date.now()}`,
+                currency: "XTR",
+                prices: [{ label: "Stars", amount: parseInt(amount) }]
+            });
+            return res.json({ success: true, url: r.data.result });
+        } else {
+            const r = await axios.post('https://pay.crypt.bot/api/createInvoice', {
+                asset: 'TON', amount: amount.toString(), payload: id.toString()
+            }, { headers: { 'Crypto-Pay-API-Token': CONFIG.CRYPTO_TOKEN } });
+            return res.json({ success: true, url: r.data.result.pay_url });
+        }
+    } catch (e) { res.json({ success: false }); }
+});
+
+app.post('/api/withdraw', async (req, res) => {
+    const { id, amount, method, details } = req.body;
     const user = initUser(id);
-    const wager = parseFloat(bet);
+    const amt = parseFloat(amount);
 
-    if (user.balance < wager) return res.json({ error: "Solde insuffisant" });
-    user.balance -= wager;
-    user.totalPlayed += wager;
+    // Strict Limits
+    if (method === 'CRYPTOBOT' && amt < 1) return res.json({ success: false, message: "Min 1 TON" });
+    if (method === 'AIRTEL' && amt < 3) return res.json({ success: false, message: "Min 3 TON" });
 
+    if (user.balance < amt) return res.json({ success: false, message: "Insufficient Balance" });
+
+    const fcfa = (amt * CONFIG.TON_TO_FCFA).toFixed(0);
+    const msg = `💰 **WITHDRAWAL REQUEST**\nUser: ${id}\nAmount: ${amt} TON (${fcfa} FCFA)\nMethod: ${method}\nDetails: ${details}`;
+    
+    await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+        chat_id: CONFIG.ADMIN_ID, text: msg, parse_mode: 'Markdown'
+    });
+
+    user.balance -= amt;
+    user.history.unshift({type: 'out', amount: -amt, detail: `Withdraw ${method}`, time: new Date().toLocaleTimeString()});
+    saveDB();
+    res.json({ success: true, message: "Request sent to Admin!" });
+});
+
+app.post('/api/play', (req, res) => {
+    const { id, bet, game } = req.body;
+    const user = initUser(id);
+    const b = parseFloat(bet);
+    if (user.balance < b) return res.json({ error: "Low balance" });
+
+    user.balance -= b;
     let win = 0;
-    let result = "";
-
+    let result = [];
+    
     if (game === 'slots') {
-        const slots = ['💎','🍀','🔥','🍋','🍒'];
-        const r1 = slots[Math.floor(Math.random()*slots.length)];
-        const r2 = slots[Math.floor(Math.random()*slots.length)];
-        const r3 = slots[Math.floor(Math.random()*slots.length)];
-        result = [r1, r2, r3];
-        if(r1 === r2 && r2 === r3) win = wager * 5;
-        else if(r1 === r2 || r2 === r3) win = wager * 1.5;
-    } else if (game === 'dice') {
-        const roll = Math.floor(Math.random() * 6) + 1;
-        result = roll;
-        win = roll >= 4 ? wager * 2 : 0;
-    } else if (game === 'mines') {
-        const isHit = Math.random() > (minesCount / 25);
-        result = isHit ? "💎" : "💥";
-        win = isHit ? wager * (1 + (minesCount * 0.5)) : 0;
+        const symbols = ['💎','🍋','🍒','🔔','7️⃣'];
+        result = [symbols[Math.floor(Math.random()*5)], symbols[Math.floor(Math.random()*5)], symbols[Math.floor(Math.random()*5)]];
+        if (result[0] === result[1] && result[1] === result[2]) win = b * 10;
+        else if (result[0] === result[1]) win = b * 2;
     }
-
+    
     user.balance += win;
-    const status = win > 0 ? 'win' : 'loss';
-    user.history.unshift({type: status, amount: win > 0 ? win : -wager, detail: `Game: ${game}`, time: new Date().toLocaleTimeString()});
     saveDB();
     res.json({ result, win, balance: user.balance });
 });
 
-// --- SYSTÈME DE PAIEMENT & RETRAIT ---
-app.post('/api/withdraw', async (req, res) => {
-    const { id, amount, method, details } = req.body;
-    const user = initUser(id);
-    const val = parseFloat(amount);
-
-    if (user.balance < val) return res.json({ success: false, message: "Solde insuffisant" });
-
-    // Notification Admin pour validation manuelle (Airtel/Carte)
-    const msg = `🚨 **DEMANDE DE RETRAIT**\n👤 ID: ${id}\n💰 Montant: ${val} TON\n🏦 Méthode: ${method}\n📝 Détails: ${details}`;
-    await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
-        chat_id: CONFIG.ADMIN_ID,
-        text: msg,
-        parse_mode: 'Markdown'
-    });
-
-    user.balance -= val;
-    user.history.unshift({type: 'withdraw', amount: -val, detail: `Retrait ${method}`, time: new Date().toLocaleString()});
-    saveDB();
-    res.json({ success: true, message: "Demande envoyée à l'administrateur !" });
-});
-
-// Route pour CryptoBot
-app.post('/api/deposit', async (req, res) => {
-    const { id, asset, amount } = req.body;
-    try {
-        const response = await axios.post('https://pay.crypt.bot/api/createInvoice', {
-            asset: asset,
-            amount: amount,
-            payload: id.toString()
-        }, { headers: { 'Crypto-Pay-API-Token': CONFIG.CRYPTO_TOKEN } });
-        res.json({ success: true, url: response.data.result.pay_url });
-    } catch (e) { res.json({ success: false }); }
-});
-
 app.post('/api/user-data', (req, res) => res.json(initUser(req.body.id)));
 
-app.listen(3000, () => console.log("Serveur Starrussi prêt !"));
+app.listen(3000, () => console.log("Server Online"));
