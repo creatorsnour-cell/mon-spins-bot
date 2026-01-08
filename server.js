@@ -17,12 +17,12 @@ const CONFIG = {
     CHANNEL_ID: '@starrussi'
 };
 
-// --- RÈGLES ET LIMITES ---
+// --- NOUVELLES RÈGLES ET LIMITES ---
 const RULES = {
-    MIN_WITHDRAW_TON: 2.0,    //
-    MIN_DEPOSIT_TON: 0.2,     //
-    BONUS_TASK: 0.05,         // Gain abonnement chaîne
-    REFERRAL_REWARD: 0.01     // Gain par ami invité
+    MIN_WITHDRAW_TON: 2.0,    // Minimum retrait 2 TON
+    MIN_DEPOSIT_TON: 0.2,     // Minimum dépôt 0.2 TON
+    BONUS_TASK: 0.05,         // Bonus abonnement 0.05 TON
+    REFERRAL_REWARD: 0.01     // Bonus parrainage 0.01 TON
 };
 
 const DB_FILE = './database.json';
@@ -31,20 +31,22 @@ const DB_FILE = './database.json';
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
 const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
+// Initialisation utilisateur avec PARRAINAGE
 const initUser = (id, referrerId = null) => {
     if (!db[id]) {
         db[id] = { 
             balance: 0.0, 
             taskDone: false, 
-            history: [], 
+            history: [],
             referrer: referrerId,
             referralCount: 0 
         };
-        // Bonus Parrainage
-        if (referrerId && db[referrerId]) {
+        
+        // Si parrainé par quelqu'un d'existant
+        if (referrerId && db[referrerId] && referrerId !== id) {
             db[referrerId].balance += RULES.REFERRAL_REWARD;
             db[referrerId].referralCount += 1;
-            addHistory(referrerId, 'deposit', RULES.REFERRAL_REWARD, "Bonus Parrainage");
+            addHistory(referrerId, 'deposit', RULES.REFERRAL_REWARD, "Bonus Parrainage (Ami invité)");
         }
         saveDB();
     }
@@ -67,13 +69,14 @@ const addHistory = (id, type, amount, detail) => {
 
 // --- ROUTES API ---
 
-// 1. Initialisation
+// 1. Récupérer les données (Gère le parrainage au premier lancement)
 app.post('/api/user-data', (req, res) => {
     const { id, referrerId } = req.body;
-    res.json(initUser(id, referrerId));
+    const user = initUser(id, referrerId);
+    res.json(user);
 });
 
-// 2. Logique de Jeu (Dés x3, Slots x3, Mines)
+// 2. LOGIQUE DES JEUX (Gains x3)
 app.post('/api/play', (req, res) => {
     const { id, bet, game, minesCount, isDemo } = req.body;
     const user = initUser(id);
@@ -91,23 +94,18 @@ app.post('/api/play', (req, res) => {
     let resultDisplay = "";
     let isWin = false;
 
-    // Dés : 1-3 Perd | 4-6 Gagne x3
     if (game === 'dice') {
         const roll = Math.floor(Math.random() * 6) + 1;
         resultDisplay = roll;
         if (roll >= 4) { isWin = true; winAmount = wager * 3; }
-    } 
-    // Slots : 50% de chance de gagner x3
-    else if (game === 'slots') {
+    } else if (game === 'slots') {
         if (Math.random() > 0.5) {
             isWin = true; winAmount = wager * 3;
             resultDisplay = ['💎', '💎', '💎'];
         } else {
             resultDisplay = ['🍒', '🍋', '🍇'];
         }
-    }
-    // Mines
-    else if (game === 'mines') {
+    } else if (game === 'mines') {
         const safeSpots = 25 - minesCount;
         if (Math.random() < (safeSpots / 25)) {
             isWin = true;
@@ -131,20 +129,20 @@ app.post('/api/play', (req, res) => {
     res.json({ result: resultDisplay, win: winAmount, balance: user.balance, history: user.history });
 });
 
-// 3. Dépôts (Min 0.2 TON)
+// 3. DÉPÔTS (Dépôt min 0.2 TON)
 app.post('/api/deposit', async (req, res) => {
     const { id, asset, amount, platform } = req.body;
     const val = parseFloat(amount);
 
     if (asset === 'TON' && val < RULES.MIN_DEPOSIT_TON) {
-        return res.json({ success: false, message: `Minimum ${RULES.MIN_DEPOSIT_TON} TON` });
+        return res.json({ success: false, message: `Dépôt minimum : ${RULES.MIN_DEPOSIT_TON} TON` });
     }
 
     try {
         let url = "";
         if (asset === 'STARS') {
             const r = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/createInvoiceLink`, {
-                title: "Crédit Casino", description: `${amount} Stars`, payload: `DEP-${id}`,
+                title: "Recharge Casino", description: `${amount} Stars`, payload: `DEP-${id}`,
                 currency: "XTR", prices: [{ label: "Stars", amount: parseInt(amount) }]
             });
             url = r.data.result;
@@ -160,10 +158,10 @@ app.post('/api/deposit', async (req, res) => {
             url = r.data.result.link;
         }
         res.json({ success: true, url });
-    } catch (e) { res.json({ success: false, message: "Erreur API" }); }
+    } catch (e) { res.json({ success: false, message: "Erreur API Paiement" }); }
 });
 
-// 4. Retraits (Min 2 TON)
+// 4. RETRAITS (Retrait min 2 TON)
 app.post('/api/withdraw', async (req, res) => {
     const { id, asset, amount, platform } = req.body;
     const user = initUser(id);
@@ -171,7 +169,7 @@ app.post('/api/withdraw', async (req, res) => {
 
     if (user.balance < val) return res.json({ success: false, message: "Solde insuffisant" });
     if (asset === 'TON' && val < RULES.MIN_WITHDRAW_TON) {
-        return res.json({ success: false, message: `Minimum ${RULES.MIN_WITHDRAW_TON} TON` });
+        return res.json({ success: false, message: `Retrait minimum : ${RULES.MIN_WITHDRAW_TON} TON` });
     }
 
     try {
@@ -194,16 +192,16 @@ app.post('/api/withdraw', async (req, res) => {
             saveDB();
             res.json({ success: true, message: "Retrait effectué !" });
         } else {
-            res.json({ success: false, message: "Erreur plateforme" });
+            res.json({ success: false, message: "Erreur Plateforme." });
         }
-    } catch (e) { res.json({ success: false, message: "Fonds bot insuffisants" }); }
+    } catch (e) { res.json({ success: false, message: "Erreur API ou Fonds insuffisants." }); }
 });
 
-// 5. Bonus Chaîne (0.05 TON)
+// 5. BONUS TASK (0.05 TON)
 app.post('/api/check-task', async (req, res) => {
     const { id } = req.body;
     const user = initUser(id);
-    if (user.taskDone) return res.json({ success: false, message: "Déjà fait !" });
+    if (user.taskDone) return res.json({ success: false, message: "Déjà réclamé !" });
 
     try {
         const r = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getChatMember`, {
@@ -213,16 +211,16 @@ app.post('/api/check-task', async (req, res) => {
         if (['member', 'administrator', 'creator'].includes(status)) {
             user.balance += RULES.BONUS_TASK;
             user.taskDone = true;
-            addHistory(id, 'deposit', RULES.BONUS_TASK, "Bonus Abonnement");
+            addHistory(id, 'deposit', RULES.BONUS_TASK, "Bonus Abonnement Chaîne");
             saveDB();
-            res.json({ success: true, message: `+${RULES.BONUS_TASK} TON reçu !` });
+            res.json({ success: true, message: `Bravo ! +${RULES.BONUS_TASK} TON reçus.` });
         } else {
-            res.json({ success: false, message: "Rejoins le canal d'abord." });
+            res.json({ success: false, message: "Rejoins d'abord le canal." });
         }
-    } catch (e) { res.json({ success: false, message: "Erreur vérification" }); }
+    } catch (e) { res.json({ success: false, message: "Erreur vérification." }); }
 });
 
-// 6. Webhook pour les paiements automatiques
+// 6. WEBHOOK (Validation automatique des paiements)
 app.post('/api/webhook/crypto', (req, res) => {
     const { payload, amount, status } = req.body;
     if (status === 'PAID') {
@@ -237,4 +235,5 @@ app.post('/api/webhook/crypto', (req, res) => {
     res.sendStatus(200);
 });
 
-app.listen(3000, () => console.log("Casino prêt sur le port 3000"));
+const PORT = 3000;
+app.listen(PORT, () => console.log(`Serveur lancé sur le port ${PORT}`));
