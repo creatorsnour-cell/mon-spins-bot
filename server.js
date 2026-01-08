@@ -12,45 +12,54 @@ const CONFIG = {
     BOT_TOKEN: '8554964276:AAFXlTNSQXWQy8RhroiqwjcqaSg7lYzY9GU',
     CRYPTO_TOKEN: '510513:AAeEQr2dTYwFbaX56NPAgZluhSt34zua2fc',
     ADMIN_ID: '7019851823',
-    BOT_USERNAME: 'Newspin_onebot',
-    CONVERSION_RATE: 1000 // 1 TON = 1000 Casino Tokens (Chips)
+    BOT_USERNAME: 'Newspin_onebot', // Your bot username without @
+    TON_TO_FCFA: 1100
 };
 
 const DB_FILE = './database.json';
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
 const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-const initUser = (id) => {
+const initUser = (id, refId = null) => {
     if (!db[id]) {
         db[id] = { 
-            balance: 0.1, 
-            chips: 50, // Free tokens to start
-            tasks: [], 
-            referrals: 0,
-            lastDaily: 0,
-            history: [] 
+            balance: 0.05, 
+            chips: 100,
+            invited: 0,
+            history: [{type: 'bonus', amount: 0.05, detail: 'Welcome Bonus', time: new Date().toLocaleString()}] 
         };
+        // Referral Logic
+        if (refId && db[refId] && refId !== id) {
+            db[refId].balance += 0.02;
+            db[refId].invited += 1;
+            db[refId].history.unshift({type: 'ref', amount: 0.02, detail: 'New Referral', time: new Date().toLocaleString()});
+        }
         saveDB();
     }
     return db[id];
 };
 
-// --- API ROUTES ---
+// --- API ENDPOINTS ---
 
-// Main Data
-app.post('/api/user-data', (req, res) => res.json(initUser(req.body.id)));
+app.post('/api/user-data', (req, res) => {
+    const { id, refId } = req.body;
+    const user = initUser(id, refId);
+    res.json({
+        ...user,
+        refLink: `https://t.me/${CONFIG.BOT_USERNAME}?start=${id}`
+    });
+});
 
-// Unified Deposit (Stars & TON)
 app.post('/api/deposit', async (req, res) => {
     const { id, asset, amount } = req.body;
     try {
         if (asset === 'STARS') {
             const r = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/createInvoiceLink`, {
-                title: "Buy Casino Chips",
-                description: `${amount} Stars Package`,
-                payload: `PAY_${id}`,
+                title: "Deposit Stars",
+                description: `Purchase ${amount} Stars of credits`,
+                payload: `STARS_${id}`,
                 currency: "XTR",
-                prices: [{ label: "Chips", amount: parseInt(amount) }]
+                prices: [{ label: "Stars", amount: parseInt(amount) }]
             });
             res.json({ success: true, url: r.data.result });
         } else {
@@ -59,10 +68,34 @@ app.post('/api/deposit', async (req, res) => {
             }, { headers: { 'Crypto-Pay-API-Token': CONFIG.CRYPTO_TOKEN } });
             res.json({ success: true, url: r.data.result.pay_url });
         }
-    } catch (e) { res.json({ success: false }); }
+    } catch (e) { res.json({ success: false, message: "API Error" }); }
 });
 
-// MiniGames Logic (Dice, Mines, Slots)
+app.post('/api/withdraw', async (req, res) => {
+    const { id, amount, method, details } = req.body;
+    const user = initUser(id);
+    const amt = parseFloat(amount);
+
+    // Minimums
+    const min = method === 'AIRTEL' ? 3.0 : 1.0;
+    if (amt < min) return res.json({ success: false, message: `Min withdrawal is ${min} TON` });
+    if (user.balance < amt) return res.json({ success: false, message: "Insufficient balance" });
+
+    // Admin Notification
+    const fcfa = (amt * CONFIG.TON_TO_FCFA).toFixed(0);
+    const msg = `🚨 *WITHDRAW REQUEST*\nUser: \`${id}\`\nAmount: ${amt} TON\nValue: ${fcfa} FCFA\nMethod: ${method}\nDetails: \`${details}\``;
+    
+    try {
+        await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+            chat_id: CONFIG.ADMIN_ID, text: msg, parse_mode: 'Markdown'
+        });
+        user.balance -= amt;
+        user.history.unshift({type: 'out', amount: -amt, detail: `Withdrawal (${method})`, time: new Date().toLocaleString()});
+        saveDB();
+        res.json({ success: true, message: "Request sent to admin!" });
+    } catch (e) { res.json({ success: false, message: "Telegram Notification Error" }); }
+});
+
 app.post('/api/play', (req, res) => {
     const { id, bet, game, minesCount } = req.body;
     const user = initUser(id);
@@ -76,24 +109,22 @@ app.post('/api/play', (req, res) => {
     if (game === 'dice') {
         const roll = Math.floor(Math.random() * 6) + 1;
         result = roll;
-        if (roll >= 4) win = cost * 2;
-    } else if (game === 'mines') {
-        const isWin = Math.random() > (minesCount / 25);
-        result = isWin ? "💎" : "💥";
-        win = isWin ? cost * (1 + (minesCount * 0.2)) : 0;
+        if (roll >= 4) win = cost * 2.5;
     } else if (game === 'slots') {
-        const syms = ['💎','🍒','7️⃣','🍀'];
-        const r1 = syms[Math.floor(Math.random()*4)];
-        const r2 = syms[Math.floor(Math.random()*4)];
-        const r3 = syms[Math.floor(Math.random()*4)];
-        result = [r1, r2, r3];
-        if (r1 === r2 && r2 === r3) win = cost * 10;
-        else if (r1 === r2) win = cost * 1.5;
+        const s = ['💎','🍒','7️⃣','🍀','🔥'];
+        result = [s[Math.floor(Math.random()*5)], s[Math.floor(Math.random()*5)], s[Math.floor(Math.random()*5)]];
+        if (result[0] === result[1] && result[1] === result[2]) win = cost * 10;
+        else if (result[0] === result[1]) win = cost * 2;
+    } else if (game === 'mines') {
+        const safe = (25 - minesCount) / 25;
+        if (Math.random() < safe) { result = "💎"; win = cost * (1 + (minesCount * 0.3)); }
+        else { result = "💥"; win = 0; }
     }
 
     user.balance += win;
+    user.history.unshift({type: win > 0 ? 'win' : 'loss', amount: win > 0 ? win : -cost, detail: `Played ${game}`, time: new Date().toLocaleTimeString()});
     saveDB();
     res.json({ result, win, balance: user.balance });
 });
 
-app.listen(3000, () => console.log("Starrussi Engine running on port 3000"));
+app.listen(3000, () => console.log("Bot Server Running on Port 3000"));
