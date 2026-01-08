@@ -3,134 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>STARRUSSI WORLD</title>
+    <title>STARRUSSI PRO</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --accent: #00f2ff; --gold: #ffcc00; --bg: #050505; --card: #121212; }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; text-align: center; overflow-x: hidden; }
+        :root { --blue: #00d2ff; --neon: #00ff88; --dark: #07090f; --glass: rgba(255,255,255,0.05); }
+        body { background: var(--dark); color: white; font-family: 'Inter', sans-serif; margin: 0; padding-bottom: 100px; }
         
-        /* Glassmorphism Header */
-        .top-bar { padding: 40px 20px; background: linear-gradient(135deg, #1a1a1a 0%, #050505 100%); border-bottom: 2px solid var(--accent); }
-        .balance-title { font-size: 10px; letter-spacing: 3px; opacity: 0.6; }
-        .balance-main { font-size: 50px; font-weight: 900; text-shadow: 0 0 15px var(--accent); }
+        /* Header Card */
+        .wallet-card { background: linear-gradient(135deg, #1a202c 0%, #07090f 100%); padding: 30px; border-bottom: 2px solid var(--blue); }
+        .bal-val { font-size: 45px; font-weight: 900; letter-spacing: -1px; }
+        .token-val { color: var(--blue); font-size: 14px; opacity: 0.8; }
 
-        /* Smooth Navigation */
-        .nav { display: flex; justify-content: center; gap: 20px; margin: 20px 0; }
-        .nav-btn { padding: 10px 20px; border-radius: 30px; border: 1px solid #333; font-size: 12px; font-weight: bold; transition: 0.3s; }
-        .nav-btn.active { background: var(--accent); color: black; border-color: var(--accent); }
+        /* Quick Actions Menu */
+        .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 15px; }
+        .action-btn { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 15px; font-size: 11px; text-align: center; }
+        .action-btn i { font-size: 20px; display: block; margin-bottom: 5px; color: var(--blue); }
 
-        /* Real Casino Slots Animation */
-        .slot-machine { background: var(--card); padding: 30px; border-radius: 25px; margin: 15px; border: 1px solid #222; }
-        .reels { display: flex; justify-content: center; gap: 10px; margin: 20px 0; font-size: 60px; height: 100px; perspective: 1000px; }
-        .reel { transition: transform 0.5s cubic-bezier(.45,.05,.55,.95); }
-        .spinning { animation: roll 0.1s infinite linear; }
-        @keyframes roll { 0% { transform: translateY(-10px); } 100% { transform: translateY(10px); } }
+        /* Game Grid */
+        .section-title { text-align: left; padding: 0 20px; font-size: 14px; font-weight: bold; text-transform: uppercase; color: #4a5568; }
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
+        .game-card { background: var(--glass); height: 120px; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .game-card:active { transform: scale(0.95); background: rgba(0,210,255,0.1); }
+        .game-card i { font-size: 35px; margin-bottom: 10px; }
 
-        .btn-spin { background: linear-gradient(to right, #00f2ff, #0066ff); color: white; border: none; padding: 20px; width: 100%; border-radius: 15px; font-size: 20px; font-weight: 900; box-shadow: 0 5px 20px rgba(0, 242, 255, 0.4); }
-        
-        /* Payment Grid */
-        .pay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; }
-        .pay-card { background: #1a1a1a; padding: 20px; border-radius: 15px; border: 1px solid #333; }
-        input { background: #000; border: 1px solid #333; color: white; padding: 15px; width: 80%; border-radius: 10px; margin: 10px 0; }
+        /* Navigation Bar */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #0f172a; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1e293b; }
+        .nav-link { font-size: 10px; color: #64748b; text-decoration: none; }
+        .nav-link.active { color: var(--blue); }
+
+        /* Modal Overlay */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; padding-top: 50px; }
+        .modal-content { background: #1a202c; margin: 20px; padding: 25px; border-radius: 25px; border: 1px solid var(--blue); }
     </style>
 </head>
 <body>
 
-<div class="top-bar">
-    <div class="balance-title">TOTAL ASSETS</div>
-    <div class="balance-main"><span id="bal">0.00</span> <small style="font-size: 15px;">TON</small></div>
+<div class="wallet-card">
+    <div style="font-size: 12px; opacity: 0.5;">AVAILABLE BALANCE</div>
+    <div class="bal-val"><span id="bal">0.00</span> <small style="font-size: 18px;">TON</small></div>
+    <div class="token-val"><i class="fas fa-coins"></i> <span id="chips">50</span> TOKENS</div>
 </div>
 
-<div class="nav">
-    <div class="nav-btn active" onclick="show('games')">GAMES</div>
-    <div class="nav-btn" onclick="show('cash')">CASHIER</div>
+<div class="quick-actions">
+    <div class="action-btn" onclick="openDeposit()"><i class="fas fa-plus-circle"></i> DEPOSIT</div>
+    <div class="action-btn" onclick="openWithdraw()"><i class="fas fa-wallet"></i> WITHDRAW</div>
+    <div class="action-btn" onclick="showView('tasks')"><i class="fas fa-tasks"></i> TASKS</div>
 </div>
 
-<div id="view-games">
-    <div class="slot-machine">
-        <div class="reels" id="reels">
-            <div class="reel" id="r1">🎰</div>
-            <div class="reel" id="r2">🎰</div>
-            <div class="reel" id="r3">🎰</div>
+<div id="view-home">
+    <div class="section-title">Minigames Center</div>
+    <div class="game-grid">
+        <div class="game-card" onclick="openGame('slots')"><i class="fas fa-slot-machine" style="color: #ff4444;"></i><span>SLOTS</span></div>
+        <div class="game-card" onclick="openGame('dice')"><i class="fas fa-dice" style="color: #00ff88;"></i><span>DICE</span></div>
+        <div class="game-card" onclick="openGame('mines')"><i class="fas fa-bomb" style="color: #ffcc00;"></i><span>MINES</span></div>
+        <div class="game-card" onclick="showView('invite')"><i class="fas fa-users" style="color: #00d2ff;"></i><span>FRIENDS</span></div>
+    </div>
+</div>
+
+<div id="game-modal" class="modal">
+    <div class="modal-content">
+        <h2 id="game-title">GAME</h2>
+        <div id="game-display" style="font-size: 50px; margin: 20px 0;">🎰</div>
+        <div id="mines-config" style="display:none;">
+            Mines: <input type="range" id="mCount" min="1" max="24" value="3">
         </div>
-        <input type="number" id="bet" value="0.2" step="0.1">
-        <button class="btn-spin" onclick="play()">SPIN</button>
+        <input type="number" id="bet" value="0.2" style="width: 80%; padding: 15px; border-radius: 10px; background: #000; color: #fff; border: 1px solid #333;">
+        <button class="action-btn" style="width: 100%; margin-top: 15px; background: var(--blue); color: black;" onclick="playNow()">START SESSION</button>
+        <button onclick="closeModal()" style="background: none; border: none; color: gray; margin-top: 10px;">Close</button>
     </div>
 </div>
 
-<div id="view-cash" style="display:none;">
-    <div class="pay-grid">
-        <div class="pay-card" onclick="deposit('STARS')">⭐ STARS<br><small>Min: 5</small></div>
-        <div class="pay-card" onclick="deposit('TON')">💎 CRYPTO<br><small>Min: 0.2</small></div>
-    </div>
-    <hr style="border: 0.5px solid #222;">
-    <h3>WITHDRAW</h3>
-    <select id="wMethod" style="padding: 15px; width: 90%; background: #1a1a1a; color: white; border-radius: 10px;">
-        <option value="CRYPTOBOT">CryptoBot (Min 1 TON)</option>
-        <option value="AIRTEL">Airtel Money (Min 3 TON)</option>
-    </select>
-    <input type="text" id="wDetails" placeholder="Wallet or Phone Number">
-    <input type="number" id="wAmount" placeholder="Amount TON">
-    <button class="btn-spin" style="background: #ff4444;" onclick="withdraw()">WITHDRAW NOW</button>
+<div class="bottom-nav">
+    <div class="nav-link active" onclick="showView('home')"><i class="fas fa-home"></i><br>HOME</div>
+    <div class="nav-link" onclick="showView('tasks')"><i class="fas fa-bolt"></i><br>TASKS</div>
+    <div class="nav-link" onclick="showView('invite')"><i class="fas fa-user-plus"></i><br>REFER</div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
+    let currentGame = '';
 
-    function show(v) {
-        document.getElementById('view-games').style.display = v === 'games' ? 'block' : 'none';
-        document.getElementById('view-cash').style.display = v === 'cash' ? 'block' : 'none';
+    function showView(v) {
+        tg.HapticFeedback.impactOccurred('light');
+        // Logic to switch visibility
     }
+
+    function openGame(g) {
+        currentGame = g;
+        document.getElementById('game-modal').style.display = 'block';
+        document.getElementById('game-title').innerText = g.toUpperCase();
+        document.getElementById('mines-config').style.display = g === 'mines' ? 'block' : 'none';
+    }
+
+    function closeModal() { document.getElementById('game-modal').style.display = 'none'; }
 
     async function sync() {
         const r = await fetch('/api/user-data', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid})});
         const d = await r.json();
         document.getElementById('bal').innerText = d.balance.toFixed(2);
+        document.getElementById('chips').innerText = d.chips;
     }
 
-    async function play() {
-        const bet = document.getElementById('bet').value;
-        const reels = [document.getElementById('r1'), document.getElementById('r2'), document.getElementById('r3')];
-        reels.forEach(r => r.classList.add('spinning'));
-
-        const r = await fetch('/api/play', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, bet, game:'slots'})
-        });
-        const d = await r.json();
-
-        setTimeout(() => {
-            reels.forEach((r, i) => {
-                r.classList.remove('spinning');
-                r.innerText = d.result[i];
-            });
-            if (d.error) tg.showAlert(d.error);
-            sync();
-        }, 1000);
-    }
-
-    async function deposit(asset) {
-        const amount = prompt(`Enter amount (${asset}):`);
+    async function openDeposit() {
+        const method = prompt("Choose Method: STARS or TON").toUpperCase();
+        const amount = prompt("Enter Amount (Min 5 Stars / 0.2 TON):");
         const r = await fetch('/api/deposit', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, asset, amount})
+            body: JSON.stringify({id:uid, asset:method, amount})
         });
         const d = await r.json();
-        if (d.url) tg.openTelegramLink(d.url);
-        else tg.showAlert(d.message || "Error");
+        if(d.url) tg.openTelegramLink(d.url);
     }
 
-    async function withdraw() {
-        const amount = document.getElementById('wAmount').value;
-        const method = document.getElementById('wMethod').value;
-        const details = document.getElementById('wDetails').value;
-        const r = await fetch('/api/withdraw', {
+    async function playNow() {
+        const bet = document.getElementById('bet').value;
+        const r = await fetch('/api/play', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, amount, method, details})
+            body: JSON.stringify({id:uid, bet, game:currentGame, minesCount: document.getElementById('mCount').value})
         });
         const d = await r.json();
-        tg.showAlert(d.message);
+        if(d.error) return tg.showAlert(d.error);
+        
+        document.getElementById('game-display').innerText = Array.isArray(d.result) ? d.result.join(' ') : d.result;
         sync();
     }
 
