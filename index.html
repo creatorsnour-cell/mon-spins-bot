@@ -3,119 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Starrussi Casino</title>
+    <title>Starrussi Premium Casino</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        /* BASE THEME */
-        :root { 
-            --primary: #00d2ff; --win: #00ff88; --loss: #ff4444;
-            --bg: #05070a; --card: #10141d; --text: #ffffff; --gold: #ffd700;
-        }
-        body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; text-align: center; margin: 0; padding-bottom: 50px; }
-        .card { background: var(--card); border-radius: 20px; padding: 20px; margin: 15px; border: 1px solid rgba(255,255,255,0.05); }
-        .balance-val { font-size: 48px; font-weight: 800; color: var(--text); text-shadow: 0 0 20px rgba(0, 210, 255, 0.3); }
-        .nav { display: flex; background: #161b26; margin: 15px; border-radius: 16px; padding: 4px; overflow-x: auto; }
-        .nav div { flex: 1; padding: 12px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 12px; opacity: 0.5; min-width: 70px; }
-        .nav .active { background: #232a3b; color: var(--primary); opacity: 1; }
-        .display { font-size: 64px; height: 100px; display: flex; align-items: center; justify-content: center; }
-        .btn { background: var(--win); color: #000; border: none; padding: 18px; width: 100%; border-radius: 16px; font-weight: 800; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
-        .ref-link-display { background: #000; color: var(--gold); padding: 12px; border-radius: 12px; font-size: 11px; margin: 15px 0; word-break: break-all; border: 1px dashed var(--gold); }
-        .hist-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #232a3b; font-size: 12px; }
+        :root { --p: #00d2ff; --s: #00ff88; --err: #ff4444; --dark: #0a0e17; --card: #161b26; }
+        body { background: var(--dark); color: white; font-family: 'Poppins', sans-serif; margin: 0; padding-bottom: 80px; }
+        .header { padding: 30px 20px; background: linear-gradient(180deg, #161b26 0%, #0a0e17 100%); border-bottom: 1px solid #232a3b; }
+        .bal-card { font-size: 42px; font-weight: 800; color: white; }
+        .ton-label { color: var(--p); font-size: 18px; }
+        
+        .nav-bar { display: flex; justify-content: space-around; background: var(--card); margin: 15px; border-radius: 15px; padding: 10px; }
+        .nav-item { font-size: 12px; opacity: 0.6; cursor: pointer; transition: 0.3s; }
+        .nav-item.active { opacity: 1; color: var(--p); border-bottom: 2px solid var(--p); }
+
+        .game-box { background: var(--card); margin: 15px; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .slot-display { font-size: 50px; min-height: 80px; display: flex; justify-content: center; gap: 10px; }
+        
+        .btn { background: var(--s); color: #000; border: none; padding: 15px; width: 100%; border-radius: 12px; font-weight: 700; cursor: pointer; margin-top: 15px; transition: 0.2s; }
+        .btn:active { transform: scale(0.95); }
+        .btn-pay { background: #232a3b; color: white; border: 1px solid #323a4d; margin-top: 8px; font-size: 13px; }
+
+        .history-list { margin: 15px; text-align: left; }
+        .history-item { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; font-size: 12px; }
+        
+        input, select { background: #0a0e17; border: 1px solid #232a3b; color: white; padding: 12px; width: 90%; border-radius: 10px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div style="padding-top: 20px;">
-    <div style="font-size:11px; opacity:0.5;">TOTAL BALANCE</div>
-    <div class="balance-val"><span id="bal">0.00</span> <span style="font-size:18px; color:var(--primary);">TON</span></div>
+<div class="header">
+    <div style="font-size:12px; opacity:0.5;">SOLDE DISPONIBLE</div>
+    <div class="bal-card"><span id="bal">0.00</span> <span class="ton-label">TON</span></div>
 </div>
 
-<div class="nav">
-    <div id="t-slots" class="active" onclick="setG('slots')">Slots</div>
-    <div id="t-dice" onclick="setG('dice')">Dice</div>
-    <div id="t-mines" onclick="setG('mines')">Mines</div>
-    <div id="t-earn" onclick="setG('earn')">Earn</div>
-    <div id="t-ref" onclick="setG('ref')">Friends</div>
+<div class="nav-bar">
+    <div class="nav-item active" onclick="tab('play')">🎮 JOUER</div>
+    <div class="nav-item" onclick="tab('deposit')">💰 DÉPÔT</div>
+    <div class="nav-item" onclick="tab('withdraw')">🏦 RETRAIT</div>
+    <div class="nav-item" onclick="tab('invite')">👥 AMIS</div>
 </div>
 
-<div id="game-zone" class="card">
-    <div id="display" class="display">🎰</div>
-    <div id="m-opt" style="display:none; margin: 10px 0;">
-        <input type="range" id="mCountRange" min="1" max="24" value="3" oninput="document.getElementById('mDisp').innerText=this.value">
-        <div>Mines: <span id="mDisp">3</span></div>
+<div id="tab-play" class="game-box">
+    <div id="display" class="slot-display">🎰 🎰 🎰</div>
+    <div id="mines-ctrl" style="display:none;">
+        <p>Mines: <span id="mVal">3</span></p>
+        <input type="range" min="1" max="20" value="3" oninput="document.getElementById('mVal').innerText=this.value" id="minesInput">
     </div>
-    <input type="number" id="bet" value="0.10" style="background:#161b26; border:none; color:white; padding:15px; border-radius:12px; width:70%; text-align:center;">
-    <button class="btn" onclick="playGame()">PLAY</button>
+    <select id="gameSelect" onchange="checkGame(this.value)">
+        <option value="slots">🎰 Machine à sous</option>
+        <option value="dice">🎲 Dés (4-6 gagne)</option>
+        <option value="mines">💣 Mines</option>
+    </select>
+    <input type="number" id="bet" value="0.10" step="0.1">
+    <button class="btn" onclick="play()">LANCER LE JEU</button>
 </div>
 
-<div id="ref-zone" style="display:none;" class="card">
-    <h3>👥 Parrainage</h3>
-    <div id="ref-count" style="color:var(--win); font-weight:bold;">Amis invités : 0</div>
-    <div class="ref-link-display" id="ref-link-text">Génération du lien...</div>
-    <button class="btn" style="background:#0088cc; color:white;" onclick="shareRef()">🚀 PARTAGER</button>
+<div id="tab-deposit" style="display:none;" class="game-box">
+    <h3>Recharger mon compte</h3>
+    <button class="btn btn-pay" onclick="pay('TON','CRYPTOBOT')">🚀 CryptoBot (TON/USDT)</button>
+    <button class="btn btn-pay" onclick="tg.openTelegramLink('https://t.me/Newspin_onebot?start=stars')">⭐ Telegram Stars</button>
+    <button class="btn btn-pay" onclick="alert('Contactez @starrussi pour dépôt par Carte')">💳 Carte Bancaire (Direct)</button>
 </div>
 
-<div id="earn-zone" style="display:none;" class="card">
-    <h3>🎁 Bonus</h3>
-    <button class="btn" onclick="verifyTask()">VÉRIFIER @STARRUSSI</button>
+<div id="tab-withdraw" style="display:none;" class="game-box">
+    <h3>Réclamer mes gains</h3>
+    <select id="wMethod">
+        <option value="CRYPTOBOT">CryptoBot (Instant)</option>
+        <option value="AIRTEL">Airtel Money (Afrique)</option>
+        <option value="BANK">Carte Bancaire / VISA</option>
+    </select>
+    <input type="text" id="wDetails" placeholder="Numéro Airtel ou Adresse Wallet">
+    <input type="number" id="wAmount" placeholder="Montant TON">
+    <button class="btn" style="background:var(--err); color:white;" onclick="withdraw()">DEMANDER LE RETRAIT</button>
 </div>
 
-<div class="card" id="history-list"></div>
+<div class="history-list" id="hist"></div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand();
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
-    const botUser = "Newspin_onebot";
-    let curG = 'slots';
 
-    function setG(g) {
-        curG = g;
-        document.querySelectorAll('.nav div').forEach(d => d.classList.remove('active'));
-        document.getElementById('t-'+g).classList.add('active');
-        document.getElementById('game-zone').style.display = (g!=='earn' && g!=='ref') ? 'block' : 'none';
-        document.getElementById('ref-zone').style.display = (g==='ref') ? 'block' : 'none';
-        document.getElementById('earn-zone').style.display = (g==='earn') ? 'block' : 'none';
-        document.getElementById('m-opt').style.display = (g==='mines') ? 'block' : 'none';
-        if(g === 'ref') {
-            document.getElementById('ref-link-text').innerText = `https://t.me/${botUser}?start=${uid}`;
-            sync();
-        }
+    function tab(name) {
+        document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+        document.getElementById('tab-'+name).style.display = 'block';
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     }
 
+    function checkGame(v) { document.getElementById('mines-ctrl').style.display = v === 'mines' ? 'block' : 'none'; }
+
     async function sync() {
-        const r = await fetch('/api/user-data', { 
-            method:'POST', headers:{'Content-Type':'application/json'}, 
-            body:JSON.stringify({id:uid}) 
-        });
+        const r = await fetch('/api/user-data', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid})});
         const d = await r.json();
         document.getElementById('bal').innerText = d.balance.toFixed(2);
-        document.getElementById('ref-count').innerText = `Amis invités : ${d.invitedCount || 0}`;
-        
-        const list = document.getElementById('history-list');
-        list.innerHTML = d.history.map(h => `
-            <div class="hist-item">
+        document.getElementById('hist').innerHTML = d.history.map(h => `
+            <div class="history-item">
                 <span>${h.detail}</span>
                 <span style="color:${h.amount>0?'#00ff88':'#ff4444'}">${h.amount>0?'+':''}${h.amount.toFixed(2)}</span>
             </div>
         `).join('');
     }
 
-    function shareRef() {
-        const link = document.getElementById('ref-link-text').innerText;
-        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=Gagne des TON avec moi !`);
-    }
-
-    async function playGame() {
+    async function play() {
         const bet = document.getElementById('bet').value;
-        const res = await fetch('/api/play', {
+        const game = document.getElementById('gameSelect').value;
+        const mines = document.getElementById('minesInput').value;
+        
+        const r = await fetch('/api/play', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, bet, game:curG, minesCount:document.getElementById('mCountRange').value})
+            body: JSON.stringify({id:uid, bet, game, minesCount: mines})
         });
-        const d = await res.json();
+        const d = await r.json();
         if(d.error) return tg.showAlert(d.error);
+        
         document.getElementById('display').innerText = Array.isArray(d.result) ? d.result.join(' ') : d.result;
         sync();
+    }
+
+    async function withdraw() {
+        const amount = document.getElementById('wAmount').value;
+        const method = document.getElementById('wMethod').value;
+        const details = document.getElementById('wDetails').value;
+        
+        const r = await fetch('/api/withdraw', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:uid, amount, method, details})
+        });
+        const d = await r.json();
+        tg.showAlert(d.message);
+        sync();
+    }
+
+    async function pay(asset, platform) {
+        const amount = prompt("Montant à déposer (TON):", "1");
+        const r = await fetch('/api/deposit', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:uid, asset, amount})
+        });
+        const d = await r.json();
+        if(d.url) tg.openTelegramLink(d.url);
     }
 
     sync();
