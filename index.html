@@ -1,168 +1,177 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>STARRUSSI NEON</title>
+    <title>STARRUSSI NEXUS</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Inter:wght@300;600&display=swap');
-        
-        :root { --neon: #00f2ff; --purple: #bc13fe; --bg: #02050a; --card: #0a0f1d; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; padding-bottom: 100px; }
-        
-        .cyber-header { padding: 40px 20px; background: linear-gradient(180deg, #0a0f1d 0%, var(--bg) 100%); text-align: center; border-bottom: 1px solid var(--neon); box-shadow: 0 0 20px rgba(0,242,255,0.2); }
-        .glitch-text { font-family: 'Orbitron', sans-serif; font-size: 40px; font-weight: 900; color: var(--neon); text-shadow: 0 0 10px var(--neon); }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@500;700&display=swap');
+        :root { --neon: #00f2ff; --purple: #bc13fe; --bg: #020408; --card: #0a0c16; }
+        body { background: var(--bg); color: white; font-family: 'Rajdhani', sans-serif; margin: 0; padding-bottom: 100px; overflow-x: hidden; }
 
-        .nav-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px; }
-        .nav-card { background: var(--card); border: 1px solid #1a233a; padding: 15px 5px; border-radius: 12px; text-align: center; font-size: 10px; cursor: pointer; transition: 0.3s; }
-        .nav-card i { font-size: 20px; color: var(--neon); margin-bottom: 5px; display: block; }
-        .nav-card.active { border-color: var(--neon); box-shadow: 0 0 10px var(--neon); }
+        /* Header avec Barre de Progression */
+        .header { padding: 30px 20px; background: var(--card); border-bottom: 2px solid var(--neon); position: relative; }
+        .bal-container { font-family: 'Orbitron'; font-size: 38px; color: var(--neon); text-shadow: 0 0 15px var(--neon); }
+        .lvl-bar { width: 100%; height: 4px; background: #1a1a2e; margin-top: 10px; border-radius: 2px; }
+        .lvl-progress { height: 100%; background: var(--purple); width: 0%; box-shadow: 0 0 10px var(--purple); transition: 0.5s; }
 
-        .main-container { padding: 0 20px; animation: slideUp 0.5s ease; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        /* Navigation */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: rgba(10, 12, 22, 0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1a1a2e; z-index: 1000; }
+        .nav-item { color: #4a5568; font-size: 11px; text-align: center; }
+        .nav-item.active { color: var(--neon); text-shadow: 0 0 8px var(--neon); }
+        .nav-item i { font-size: 22px; margin-bottom: 4px; }
 
-        .glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; margin-bottom: 20px; }
-        .btn-action { background: linear-gradient(90deg, var(--neon), var(--purple)); color: white; border: none; padding: 18px; width: 100%; border-radius: 15px; font-family: 'Orbitron'; font-weight: bold; letter-spacing: 2px; box-shadow: 0 0 15px rgba(0,242,255,0.3); }
+        /* Tabs */
+        .tab-content { display: none; padding: 20px; animation: fadeIn 0.4s ease; }
+        .active-tab { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
 
-        .game-icon { font-size: 60px; margin: 20px 0; min-height: 80px; display: flex; justify-content: center; align-items: center; }
-        .spinning { animation: hyperSpin 0.1s infinite; }
-        @keyframes hyperSpin { 0% { transform: scale(1); } 50% { transform: scale(1.1); filter: hue-rotate(90deg); } 100% { transform: scale(1); } }
+        .glass-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 20px; margin-bottom: 15px; }
+        .cyber-btn { background: linear-gradient(90deg, var(--neon), var(--purple)); color: white; border: none; padding: 16px; width: 100%; border-radius: 14px; font-family: 'Orbitron'; font-weight: bold; font-size: 12px; cursor: pointer; border-bottom: 3px solid rgba(0,0,0,0.3); }
+        .cyber-btn:active { transform: translateY(2px); border: none; }
 
-        /* Referral List Style */
-        .user-row { display: flex; justify-content: space-between; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 10px; margin-bottom: 8px; font-size: 12px; border-left: 3px solid var(--neon); }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-item { background: #0d111d; padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #1a1a2e; }
 
-        /* Bottom Menu */
-        .bottom-bar { position: fixed; bottom: 0; width: 100%; background: #070a14; display: flex; justify-content: space-around; padding: 20px 0; border-top: 1px solid #1a233a; }
-        .bar-item { font-size: 12px; color: #4a5568; text-align: center; }
-        .bar-item.active { color: var(--neon); }
+        /* Trading Anim */
+        .trade-chart { height: 60px; display: flex; align-items: flex-end; gap: 4px; justify-content: center; margin: 15px 0; }
+        .chart-bar { width: 8px; background: var(--neon); border-radius: 4px 4px 0 0; animation: bounce 1s infinite alternate; }
+        @keyframes bounce { from { height: 10px; } to { height: 40px; } }
     </style>
 </head>
 <body>
 
-<div class="cyber-header">
-    <div style="font-size: 10px; letter-spacing: 5px; opacity: 0.6;">SYSTEM CORE BALANCE</div>
-    <div class="glitch-text" id="bal">0.00</div>
-    <div style="font-size: 12px; color: var(--purple);">TON CRYSTALS</div>
+<div class="header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 12px; letter-spacing: 2px;">USER_ID: <span id="uid-txt">...</span></span>
+        <span class="lvl-badge" style="color: var(--purple);">RANK: <span id="lvl">1</span></span>
+    </div>
+    <div class="bal-container"><span id="bal">0.00</span> <small style="font-size:14px">TON</small></div>
+    <div class="lvl-bar"><div class="lvl-progress" id="progress"></div></div>
 </div>
 
-<div class="nav-grid">
-    <div class="nav-card active" onclick="showTab('play')"><i class="fas fa-rocket"></i>PLAY</div>
-    <div class="nav-item" style="display:none"></div> <div class="nav-card" onclick="showTab('deposit')"><i class="fas fa-bolt"></i>LOAD</div>
-    <div class="nav-card" onclick="showTab('withdraw')"><i class="fas fa-wallet"></i>CASH</div>
-    <div class="nav-card" onclick="showTab('ref')"><i class="fas fa-users"></i>SQUAD</div>
+<div id="tab-trade" class="tab-content active-tab">
+    <div class="glass-card">
+        <h3><i class="fas fa-chart-line"></i> QUANTUM TRADING</h3>
+        <div class="trade-chart">
+            <div class="chart-bar" style="animation-delay: 0.1s"></div>
+            <div class="chart-bar" style="animation-delay: 0.3s"></div>
+            <div class="chart-bar" style="animation-delay: 0.2s"></div>
+            <div class="chart-bar" style="animation-delay: 0.4s"></div>
+        </div>
+        <div id="trade-res" style="text-align:center; font-size:24px; margin-bottom:15px; font-family:'Orbitron'">WAITING...</div>
+        <button class="cyber-btn" onclick="playGame('trading')">EXECUTE TRADE</button>
+    </div>
+    
+    <div class="stat-grid">
+        <div class="stat-item"><b>BTC/TON</b><br><span style="color: var(--green)">+2.4%</span></div>
+        <div class="stat-item"><b>XP EARNED</b><br><span id="xp-txt">0</span></div>
+    </div>
 </div>
 
-<div class="main-container">
-    <div id="tab-play">
-        <div class="glass-card" style="text-align:center;">
-            <div id="display" class="game-icon">🎰</div>
-            <select id="gameSelect" style="width:100%; padding:15px; background:black; color:var(--neon); border:1px solid var(--neon); border-radius:10px; margin-bottom:15px; font-family:'Orbitron';">
-                <option value="slots">CYBER SLOTS</option>
-                <option value="dice">QUANTUM DICE</option>
-                <option value="mines">VOID MINES</option>
-            </select>
-            <input type="number" id="bet" value="0.2" style="width:100%; padding:15px; background:black; color:white; border:1px solid #333; border-radius:10px; margin-bottom:15px; box-sizing:border-box;">
-            <button class="btn-action" onclick="play()">INITIATE SPIN</button>
-        </div>
+<div id="tab-games" class="tab-content">
+    <div class="glass-card" style="text-align:center">
+        <div id="game-res" style="font-size:60px; margin:20px">🎰</div>
+        <select id="gameType" style="width:100%; padding:15px; background:black; color:white; border:1px solid var(--neon); border-radius:12px; margin-bottom:15px;">
+            <option value="slots">CYBER SLOTS</option>
+            <option value="dice">NEON DICE</option>
+        </select>
+        <input type="number" id="bet" value="0.2" step="0.1" style="width:100%; padding:15px; background:black; color:white; border-radius:12px; border:1px solid #1a1a2e; margin-bottom:15px; box-sizing:border-box">
+        <button class="cyber-btn" onclick="playGame()">INITIATE SEQUENCE</button>
     </div>
+</div>
 
-    <div id="tab-deposit" style="display:none;">
-        <div class="glass-card">
-            <h3>RECHARGE CORE</h3>
-            <button class="btn-action" style="margin-bottom:10px;" onclick="deposit('TON')">TON (CryptoBot)</button>
-            <button class="btn-action" style="background:var(--purple)" onclick="deposit('STARS')">STARS (Telegram)</button>
-        </div>
+<div id="tab-tasks" class="tab-content">
+    <h3>DATA MISSIONS</h3>
+    <div class="glass-card" style="display:flex; justify-content:space-between; align-items:center;">
+        <div><b>Rejoindre Starrussi</b><br><small style="color:var(--neon)">+0.10 TON</small></div>
+        <button class="cyber-btn" style="width:auto; padding:8px 20px" onclick="verifyTask()">VÉRIFIER</button>
     </div>
+</div>
 
-    <div id="tab-withdraw" style="display:none;">
-        <div class="glass-card">
-            <h3>EXTRACTION</h3>
-            <select id="wMethod" style="width:100%; padding:15px; background:black; color:white; border-radius:10px;">
-                <option value="CRYPTOBOT">CryptoBot (1 TON min)</option>
-                <option value="AIRTEL">Airtel Money (3 TON min)</option>
-            </select>
-            <input type="text" id="wDetails" placeholder="Wallet or Phone Number" style="width:100%; padding:15px; box-sizing:border-box; margin:10px 0; background:black; border:1px solid #333; color:white; border-radius:10px;">
-            <input type="number" id="wAmt" placeholder="Amount TON" style="width:100%; padding:15px; box-sizing:border-box; background:black; border:1px solid #333; color:white; border-radius:10px;">
-            <button class="btn-action" style="margin-top:15px;" onclick="withdraw()">START EXTRACTION</button>
-        </div>
+<div id="tab-wallet" class="tab-content">
+    <div class="glass-card">
+        <h4>EXTRACTION (Retrait)</h4>
+        <select id="wMethod" style="width:100%; padding:12px; background:black; color:white; border-radius:10px; margin-bottom:10px;">
+            <option value="CRYPTOBOT">CryptoBot (Min 1 TON)</option>
+            <option value="AIRTEL">Airtel Money (Min 3 TON)</option>
+        </select>
+        <input type="text" id="wDetails" placeholder="Coordonnées Airtel/Wallet" style="width:100%; padding:12px; background:black; color:white; border-radius:10px; border:1px solid #1a1a2e; margin-bottom:10px; box-sizing:border-box">
+        <input type="number" id="wAmt" placeholder="Montant TON" style="width:100%; padding:12px; background:black; color:white; border-radius:10px; border:1px solid #1a1a2e; margin-bottom:10px; box-sizing:border-box">
+        <button class="cyber-btn" onclick="handleWithdraw()">LANCER L'EXTRACTION</button>
     </div>
+</div>
 
-    <div id="tab-ref" style="display:none;">
-        <div class="glass-card">
-            <h3>SQUAD LINK</h3>
-            <div id="refLink" style="font-size:10px; background:black; padding:15px; border-radius:10px; word-break:break-all; border:1px dashed var(--neon);"></div>
-            <button class="btn-action" style="margin-top:15px;" onclick="shareRef()">COPY & SHARE</button>
-        </div>
-        <div class="glass-card">
-            <h3>ACTIVE SQUAD (<span id="count">0</span>)</h3>
-            <div id="list"></div>
-        </div>
-    </div>
+<div class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('trade', this)"><i class="fas fa-microchip"></i><br>NEXUS</div>
+    <div class="nav-item" onclick="switchTab('games', this)"><i class="fas fa-gamepad"></i><br>GAMES</div>
+    <div class="nav-item" onclick="switchTab('tasks', this)"><i class="fas fa-bolt"></i><br>TASKS</div>
+    <div class="nav-item" onclick="switchTab('wallet', this)"><i class="fas fa-wallet"></i><br>WALLET</div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand();
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
-    const uname = tg.initDataUnsafe.user?.first_name || "Pilot";
-    const refParam = new URLSearchParams(window.location.search).get('tgWebAppStartParam');
-    let link = "";
+    const uname = tg.initDataUnsafe.user?.first_name || "User";
+    
+    document.getElementById('uid-txt').innerText = uid;
 
-    function showTab(t) {
-        document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
-        document.getElementById('tab-'+t).style.display = 'block';
-        document.querySelectorAll('.nav-card').forEach(el => el.classList.remove('active'));
+    function switchTab(id, el) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
+        document.getElementById('tab-'+id).classList.add('active-tab');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        el.classList.add('active');
         tg.HapticFeedback.impactOccurred('medium');
     }
 
     async function sync() {
         const r = await fetch('/api/user-data', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, username:uname, refId:refParam})
+            body: JSON.stringify({id:uid, username:uname})
         });
         const d = await r.json();
         document.getElementById('bal').innerText = d.balance.toFixed(2);
-        link = d.refLink;
-        document.getElementById('refLink').innerText = link;
-        document.getElementById('count').innerText = d.invitedUsers.length;
-        document.getElementById('list').innerHTML = d.invitedUsers.map(u => `
-            <div class="user-row"><span>${u.name}</span><span>${u.date}</span></div>
-        `).join('') || "No squad members yet.";
+        document.getElementById('lvl').innerText = d.level;
+        document.getElementById('progress').style.width = (d.xp || 0) + "%";
     }
 
-    async function play() {
+    async function playGame(type = null) {
         const bet = document.getElementById('bet').value;
-        const game = document.getElementById('gameSelect').value;
-        document.getElementById('display').classList.add('spinning');
+        const game = type || document.getElementById('gameType').value;
         
+        tg.HapticFeedback.impactOccurred('heavy');
         const r = await fetch('/api/play', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, bet, game, minesCount: 3})
+            body: JSON.stringify({id:uid, bet, game})
         });
         const d = await r.json();
         
-        setTimeout(() => {
-            document.getElementById('display').classList.remove('spinning');
-            if(d.error) return tg.showAlert(d.error);
-            document.getElementById('display').innerText = Array.isArray(d.result) ? d.result.join('') : d.result;
-            tg.HapticFeedback.notificationOccurred(d.win > 0 ? 'success' : 'error');
-            sync();
-        }, 800);
+        if(d.error) return tg.showAlert(d.error);
+
+        if(game === 'trading') {
+            document.getElementById('trade-res').innerText = d.result;
+            document.getElementById('trade-res').style.color = d.win > 0 ? 'var(--neon)' : 'red';
+        } else {
+            document.getElementById('game-res').innerText = Array.isArray(d.result) ? d.result.join('') : d.result;
+        }
+        
+        tg.HapticFeedback.notificationOccurred(d.win > 0 ? 'success' : 'error');
+        sync();
     }
 
-    async function deposit(asset) {
-        const amt = prompt("Amount:");
-        const r = await fetch('/api/deposit', {
+    async function verifyTask() {
+        const r = await fetch('/api/check-task', {
             method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, asset, amount:amt})
+            body: JSON.stringify({id:uid})
         });
         const d = await r.json();
-        if(d.url) tg.openTelegramLink(d.url);
+        tg.showAlert(d.message);
+        sync();
     }
 
-    async function withdraw() {
+    async function handleWithdraw() {
         const amount = document.getElementById('wAmt').value;
         const method = document.getElementById('wMethod').value;
         const details = document.getElementById('wDetails').value;
@@ -173,10 +182,6 @@
         const d = await r.json();
         tg.showAlert(d.message);
         sync();
-    }
-
-    function shareRef() {
-        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=Join my cyber squad!`);
     }
 
     sync();
