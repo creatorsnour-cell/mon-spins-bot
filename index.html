@@ -3,120 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>STARRUSSI NEXUS</title>
+    <title>STARRUSSI TITAN</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@500;700&display=swap');
-        :root { --neon: #00f2ff; --purple: #bc13fe; --bg: #020408; --card: #0a0c16; }
-        body { background: var(--bg); color: white; font-family: 'Rajdhani', sans-serif; margin: 0; padding-bottom: 100px; overflow-x: hidden; }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Share+Tech+Mono&display=swap');
+        :root { --neon: #00f2ff; --purple: #bc13fe; --dark: #020205; }
+        body { background: var(--dark); color: white; font-family: 'Share Tech Mono', monospace; margin: 0; padding-bottom: 90px; }
+        
+        .cyber-header { padding: 30px 20px; background: linear-gradient(180deg, #0d0d1a, var(--dark)); border-bottom: 2px solid var(--neon); text-align: center; }
+        .bal-val { font-family: 'Orbitron'; font-size: 45px; color: var(--neon); text-shadow: 0 0 10px var(--neon); }
 
-        /* Header avec Barre de Progression */
-        .header { padding: 30px 20px; background: var(--card); border-bottom: 2px solid var(--neon); position: relative; }
-        .bal-container { font-family: 'Orbitron'; font-size: 38px; color: var(--neon); text-shadow: 0 0 15px var(--neon); }
-        .lvl-bar { width: 100%; height: 4px; background: #1a1a2e; margin-top: 10px; border-radius: 2px; }
-        .lvl-progress { height: 100%; background: var(--purple); width: 0%; box-shadow: 0 0 10px var(--purple); transition: 0.5s; }
+        /* Trading Bar */
+        .market-scroll { display: flex; overflow-x: auto; background: #0a0a14; padding: 10px; gap: 20px; border-bottom: 1px solid #1a1a2e; }
+        .coin-box { white-space: nowrap; font-size: 12px; }
+        .up { color: #00ff88; } .down { color: #ff4444; }
 
         /* Navigation */
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: rgba(10, 12, 22, 0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1a1a2e; z-index: 1000; }
-        .nav-item { color: #4a5568; font-size: 11px; text-align: center; }
-        .nav-item.active { color: var(--neon); text-shadow: 0 0 8px var(--neon); }
-        .nav-item i { font-size: 22px; margin-bottom: 4px; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: rgba(5,5,15,0.95); display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid var(--neon); }
+        .nav-item { color: #555; font-size: 10px; text-align: center; cursor: pointer; }
+        .nav-item.active { color: var(--neon); transform: scale(1.1); }
+        .nav-item i { font-size: 22px; display: block; margin-bottom: 4px; }
 
-        /* Tabs */
-        .tab-content { display: none; padding: 20px; animation: fadeIn 0.4s ease; }
+        .tab-content { display: none; padding: 20px; animation: glitch 0.3s ease; }
+        @keyframes glitch { 0% { opacity:0; } 100% { opacity:1; } }
         .active-tab { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
 
-        .glass-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 20px; margin-bottom: 15px; }
-        .cyber-btn { background: linear-gradient(90deg, var(--neon), var(--purple)); color: white; border: none; padding: 16px; width: 100%; border-radius: 14px; font-family: 'Orbitron'; font-weight: bold; font-size: 12px; cursor: pointer; border-bottom: 3px solid rgba(0,0,0,0.3); }
-        .cyber-btn:active { transform: translateY(2px); border: none; }
+        .card { background: #0d0d1a; border: 1px solid #1a1a2e; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 0 15px rgba(0,242,255,0.1); }
+        .btn-cyber { background: var(--neon); color: black; border: none; padding: 15px; width: 100%; border-radius: 10px; font-family: 'Orbitron'; font-weight: 900; letter-spacing: 1px; }
 
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .stat-item { background: #0d111d; padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #1a1a2e; }
-
-        /* Trading Anim */
-        .trade-chart { height: 60px; display: flex; align-items: flex-end; gap: 4px; justify-content: center; margin: 15px 0; }
-        .chart-bar { width: 8px; background: var(--neon); border-radius: 4px 4px 0 0; animation: bounce 1s infinite alternate; }
-        @keyframes bounce { from { height: 10px; } to { height: 40px; } }
+        /* Trading Chart Mockup */
+        .chart-container { height: 120px; display: flex; align-items: flex-end; gap: 5px; margin: 15px 0; }
+        .bar { flex: 1; background: var(--neon); min-height: 20px; border-radius: 2px 2px 0 0; opacity: 0.7; transition: 0.5s; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 12px; letter-spacing: 2px;">USER_ID: <span id="uid-txt">...</span></span>
-        <span class="lvl-badge" style="color: var(--purple);">RANK: <span id="lvl">1</span></span>
-    </div>
-    <div class="bal-container"><span id="bal">0.00</span> <small style="font-size:14px">TON</small></div>
-    <div class="lvl-bar"><div class="lvl-progress" id="progress"></div></div>
+<div class="market-scroll" id="ticker">
+    <div class="coin-box">BTC <span class="up" id="price-btc">$94,210 ↑</span></div>
+    <div class="coin-box">TON <span class="down" id="price-ton">$5.42 ↓</span></div>
+    <div class="coin-box">SOL <span class="up" id="price-sol">$142.1 ↑</span></div>
+    <div class="coin-box">USDT <span class="up">$1.00</span></div>
+</div>
+
+<div class="cyber-header">
+    <div style="font-size: 10px; letter-spacing: 3px; opacity: 0.5;">CORE_BALANCE</div>
+    <div class="bal-val"><span id="bal">0.00</span> <small style="font-size:12px;">TON</small></div>
 </div>
 
 <div id="tab-trade" class="tab-content active-tab">
-    <div class="glass-card">
-        <h3><i class="fas fa-chart-line"></i> QUANTUM TRADING</h3>
-        <div class="trade-chart">
-            <div class="chart-bar" style="animation-delay: 0.1s"></div>
-            <div class="chart-bar" style="animation-delay: 0.3s"></div>
-            <div class="chart-bar" style="animation-delay: 0.2s"></div>
-            <div class="chart-bar" style="animation-delay: 0.4s"></div>
-        </div>
-        <div id="trade-res" style="text-align:center; font-size:24px; margin-bottom:15px; font-family:'Orbitron'">WAITING...</div>
-        <button class="cyber-btn" onclick="playGame('trading')">EXECUTE TRADE</button>
-    </div>
-    
-    <div class="stat-grid">
-        <div class="stat-item"><b>BTC/TON</b><br><span style="color: var(--green)">+2.4%</span></div>
-        <div class="stat-item"><b>XP EARNED</b><br><span id="xp-txt">0</span></div>
+    <div class="card">
+        <h3>📊 REAL-TIME ANALYSIS</h3>
+        <div class="chart-container" id="chart"></div>
+        <div id="trade-res" style="text-align:center; font-size:20px; margin:10px 0;">IDLE...</div>
+        <button class="btn-cyber" onclick="play('trade')">OPEN POSITION</button>
     </div>
 </div>
 
 <div id="tab-games" class="tab-content">
-    <div class="glass-card" style="text-align:center">
+    <div class="card" style="text-align:center;">
         <div id="game-res" style="font-size:60px; margin:20px">🎰</div>
-        <select id="gameType" style="width:100%; padding:15px; background:black; color:white; border:1px solid var(--neon); border-radius:12px; margin-bottom:15px;">
-            <option value="slots">CYBER SLOTS</option>
-            <option value="dice">NEON DICE</option>
+        <select id="gameType" style="width:100%; padding:15px; background:black; color:white; border:1px solid var(--neon); border-radius:10px; margin-bottom:10px;">
+            <option value="slots">SLOTS MACHINE</option>
+            <option value="dice">QUANTUM DICE 🎲</option>
         </select>
-        <input type="number" id="bet" value="0.2" step="0.1" style="width:100%; padding:15px; background:black; color:white; border-radius:12px; border:1px solid #1a1a2e; margin-bottom:15px; box-sizing:border-box">
-        <button class="cyber-btn" onclick="playGame()">INITIATE SEQUENCE</button>
+        <input type="number" id="bet" value="0.2" step="0.1" style="width:100%; padding:15px; background:black; border:1px solid #333; color:white; border-radius:10px; margin-bottom:15px; box-sizing:border-box;">
+        <button class="btn-cyber" onclick="play()">EXECUTE BET</button>
     </div>
 </div>
 
-<div id="tab-tasks" class="tab-content">
-    <h3>DATA MISSIONS</h3>
-    <div class="glass-card" style="display:flex; justify-content:space-between; align-items:center;">
-        <div><b>Rejoindre Starrussi</b><br><small style="color:var(--neon)">+0.10 TON</small></div>
-        <button class="cyber-btn" style="width:auto; padding:8px 20px" onclick="verifyTask()">VÉRIFIER</button>
+<div id="tab-squad" class="tab-content">
+    <div class="card">
+        <h3>📡 MISSIONS</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span>JOIN CHANNEL @starrussi</span>
+            <button class="btn-cyber" style="width:auto; padding:10px;" onclick="checkTask()">CHECK</button>
+        </div>
+    </div>
+    <div class="card">
+        <h3>👥 SQUAD LINK</h3>
+        <div id="ref-link" style="font-size:10px; background:#000; padding:15px; border:1px dashed var(--neon); word-break:break-all;">...</div>
+        <button class="btn-cyber" style="margin-top:10px;" onclick="shareRef()">SHARE DATA LINK</button>
     </div>
 </div>
 
 <div id="tab-wallet" class="tab-content">
-    <div class="glass-card">
-        <h4>EXTRACTION (Retrait)</h4>
-        <select id="wMethod" style="width:100%; padding:12px; background:black; color:white; border-radius:10px; margin-bottom:10px;">
+    <div class="card">
+        <h4>WITHDRAW EXTRACTION</h4>
+        <select id="wMethod" style="width:100%; padding:15px; background:black; color:white; border-radius:10px; margin-bottom:10px;">
             <option value="CRYPTOBOT">CryptoBot (Min 1 TON)</option>
             <option value="AIRTEL">Airtel Money (Min 3 TON)</option>
         </select>
-        <input type="text" id="wDetails" placeholder="Coordonnées Airtel/Wallet" style="width:100%; padding:12px; background:black; color:white; border-radius:10px; border:1px solid #1a1a2e; margin-bottom:10px; box-sizing:border-box">
-        <input type="number" id="wAmt" placeholder="Montant TON" style="width:100%; padding:12px; background:black; color:white; border-radius:10px; border:1px solid #1a1a2e; margin-bottom:10px; box-sizing:border-box">
-        <button class="cyber-btn" onclick="handleWithdraw()">LANCER L'EXTRACTION</button>
+        <input type="text" id="wDetails" placeholder="Coordonnées" style="width:100%; padding:15px; background:black; border:1px solid #333; color:white; border-radius:10px; margin-bottom:10px; box-sizing:border-box;">
+        <input type="number" id="wAmt" placeholder="Montant TON" style="width:100%; padding:15px; background:black; border:1px solid #333; color:white; border-radius:10px; margin-bottom:10px; box-sizing:border-box;">
+        <button class="btn-cyber" onclick="withdraw()">START WITHDRAWAL</button>
     </div>
 </div>
 
 <div class="bottom-nav">
-    <div class="nav-item active" onclick="switchTab('trade', this)"><i class="fas fa-microchip"></i><br>NEXUS</div>
-    <div class="nav-item" onclick="switchTab('games', this)"><i class="fas fa-gamepad"></i><br>GAMES</div>
-    <div class="nav-item" onclick="switchTab('tasks', this)"><i class="fas fa-bolt"></i><br>TASKS</div>
-    <div class="nav-item" onclick="switchTab('wallet', this)"><i class="fas fa-wallet"></i><br>WALLET</div>
+    <div class="nav-item active" onclick="switchTab('trade', this)"><i class="fas fa-chart-line"></i>TRADE</div>
+    <div class="nav-item" onclick="switchTab('games', this)"><i class="fas fa-rocket"></i>PLAY</div>
+    <div class="nav-item" onclick="switchTab('squad', this)"><i class="fas fa-users"></i>SQUAD</div>
+    <div class="nav-item" onclick="switchTab('wallet', this)"><i class="fas fa-wallet"></i>WALLET</div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
-    const uname = tg.initDataUnsafe.user?.first_name || "User";
-    
-    document.getElementById('uid-txt').innerText = uid;
+    const uname = tg.initDataUnsafe.user?.first_name || "Agent";
+    let refLink = "";
 
     function switchTab(id, el) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
@@ -126,6 +121,19 @@
         tg.HapticFeedback.impactOccurred('medium');
     }
 
+    // Animation de graphique
+    function updateChart() {
+        const chart = document.getElementById('chart');
+        chart.innerHTML = "";
+        for(let i=0; i<15; i++) {
+            const h = Math.floor(Math.random()*80) + 20;
+            chart.innerHTML += `<div class="bar" style="height:${h}px"></div>`;
+        }
+        // Simuler prix
+        document.getElementById('price-btc').innerText = `$${(94000 + Math.random()*500).toFixed(0)} ↑`;
+    }
+    setInterval(updateChart, 2000);
+
     async function sync() {
         const r = await fetch('/api/user-data', {
             method:'POST', headers:{'Content-Type':'application/json'},
@@ -133,15 +141,15 @@
         });
         const d = await r.json();
         document.getElementById('bal').innerText = d.balance.toFixed(2);
-        document.getElementById('lvl').innerText = d.level;
-        document.getElementById('progress').style.width = (d.xp || 0) + "%";
+        refLink = d.refLink;
+        document.getElementById('ref-link').innerText = refLink;
     }
 
-    async function playGame(type = null) {
+    async function play(type = null) {
         const bet = document.getElementById('bet').value;
         const game = type || document.getElementById('gameType').value;
-        
         tg.HapticFeedback.impactOccurred('heavy');
+
         const r = await fetch('/api/play', {
             method:'POST', headers:{'Content-Type':'application/json'},
             body: JSON.stringify({id:uid, bet, game})
@@ -150,9 +158,9 @@
         
         if(d.error) return tg.showAlert(d.error);
 
-        if(game === 'trading') {
+        if(game === 'trade') {
             document.getElementById('trade-res').innerText = d.result;
-            document.getElementById('trade-res').style.color = d.win > 0 ? 'var(--neon)' : 'red';
+            document.getElementById('trade-res').className = d.win > 0 ? "up" : "down";
         } else {
             document.getElementById('game-res').innerText = Array.isArray(d.result) ? d.result.join('') : d.result;
         }
@@ -161,17 +169,16 @@
         sync();
     }
 
-    async function verifyTask() {
+    async function checkTask() {
         const r = await fetch('/api/check-task', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid})
+            method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id:uid})
         });
         const d = await r.json();
         tg.showAlert(d.message);
         sync();
     }
 
-    async function handleWithdraw() {
+    async function withdraw() {
         const amount = document.getElementById('wAmt').value;
         const method = document.getElementById('wMethod').value;
         const details = document.getElementById('wDetails').value;
@@ -184,7 +191,12 @@
         sync();
     }
 
+    function shareRef() {
+        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=Join me on STARRUSSI TITAN!`);
+    }
+
     sync();
+    updateChart();
 </script>
 </body>
 </html>
