@@ -2,201 +2,393 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>STARRUSSI TITAN</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QUANTUM TITAN V5</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Share+Tech+Mono&display=swap');
-        :root { --neon: #00f2ff; --purple: #bc13fe; --dark: #020205; }
-        body { background: var(--dark); color: white; font-family: 'Share Tech Mono', monospace; margin: 0; padding-bottom: 90px; }
-        
-        .cyber-header { padding: 30px 20px; background: linear-gradient(180deg, #0d0d1a, var(--dark)); border-bottom: 2px solid var(--neon); text-align: center; }
-        .bal-val { font-family: 'Orbitron'; font-size: 45px; color: var(--neon); text-shadow: 0 0 10px var(--neon); }
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;500;900&display=swap');
 
-        /* Trading Bar */
-        .market-scroll { display: flex; overflow-x: auto; background: #0a0a14; padding: 10px; gap: 20px; border-bottom: 1px solid #1a1a2e; }
-        .coin-box { white-space: nowrap; font-size: 12px; }
-        .up { color: #00ff88; } .down { color: #ff4444; }
+        :root {
+            --neon-blue: #00d2ff;
+            --neon-green: #00ff88;
+            --neon-purple: #9d00ff;
+            --danger: #ff3e3e;
+            --bg-dark: #02040a;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.1);
+        }
 
-        /* Navigation */
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: rgba(5,5,15,0.95); display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid var(--neon); }
-        .nav-item { color: #555; font-size: 10px; text-align: center; cursor: pointer; }
-        .nav-item.active { color: var(--neon); transform: scale(1.1); }
-        .nav-item i { font-size: 22px; display: block; margin-bottom: 4px; }
+        body {
+            background-color: var(--bg-dark);
+            color: #e0e0e0;
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 50% -20%, #1a1f35 0%, transparent 50%);
+        }
 
-        .tab-content { display: none; padding: 20px; animation: glitch 0.3s ease; }
-        @keyframes glitch { 0% { opacity:0; } 100% { opacity:1; } }
-        .active-tab { display: block; }
+        /* Loading Screen */
+        #loader {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: var(--bg-dark); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
 
-        .card { background: #0d0d1a; border: 1px solid #1a1a2e; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 0 15px rgba(0,242,255,0.1); }
-        .btn-cyber { background: var(--neon); color: black; border: none; padding: 15px; width: 100%; border-radius: 10px; font-family: 'Orbitron'; font-weight: 900; letter-spacing: 1px; }
+        /* Header Architecture */
+        .header {
+            padding: 40px 20px 30px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
 
-        /* Trading Chart Mockup */
-        .chart-container { height: 120px; display: flex; align-items: flex-end; gap: 5px; margin: 15px 0; }
-        .bar { flex: 1; background: var(--neon); min-height: 20px; border-radius: 2px 2px 0 0; opacity: 0.7; transition: 0.5s; }
+        .balance-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 20px;
+            border-radius: 24px;
+            display: inline-block;
+            min-width: 200px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+
+        .balance-amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 42px;
+            font-weight: 900;
+            color: var(--neon-blue);
+            text-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
+        }
+
+        /* Crypto Ticker */
+        .ticker-wrap {
+            background: rgba(0,0,0,0.5);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 0;
+            display: flex;
+            gap: 30px;
+            overflow: hidden;
+        }
+
+        .ticker-move {
+            display: flex;
+            gap: 40px;
+            animation: ticker 30s linear infinite;
+            white-space: nowrap;
+        }
+
+        .ticker-item { font-size: 12px; font-family: 'JetBrains Mono'; display: flex; align-items: center; gap: 8px; }
+        .ticker-item img { width: 16px; height: 16px; }
+
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* Navigation Menu */
+        .navbar {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 400px;
+            background: rgba(15, 20, 35, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 25px;
+            display: flex; justify-content: space-around;
+            padding: 12px; z-index: 1000;
+        }
+
+        .nav-link {
+            color: #666; font-size: 11px; text-decoration: none;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            transition: 0.3s;
+        }
+
+        .nav-link.active { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
+        .nav-link i { font-size: 20px; }
+
+        /* Sections */
+        .section { display: none; padding: 20px; padding-bottom: 120px; animation: fadeIn 0.5s ease; }
+        .active-section { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Trading & Games UI */
+        .quantum-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            height: 180px; width: 100%;
+            background: #000; border-radius: 12px;
+            position: relative; overflow: hidden;
+            display: flex; align-items: flex-end; gap: 3px; padding: 10px;
+        }
+
+        .candle {
+            flex: 1; border-radius: 2px;
+            transition: height 0.5s ease;
+        }
+
+        .btn-cyber {
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+            color: #000; border: none; padding: 16px; border-radius: 15px;
+            width: 100%; font-weight: 900; font-family: 'Outfit';
+            letter-spacing: 1px; cursor: pointer; margin-top: 10px;
+        }
+
+        .input-cyber {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            color: white; padding: 15px; border-radius: 12px;
+            width: 100%; box-sizing: border-box; font-family: 'JetBrains Mono';
+            margin: 10px 0;
+        }
+
+        .status-badge {
+            font-size: 10px; padding: 4px 10px; border-radius: 20px;
+            background: rgba(0,255,136,0.1); color: var(--neon-green);
+        }
+
     </style>
 </head>
 <body>
 
-<div class="market-scroll" id="ticker">
-    <div class="coin-box">BTC <span class="up" id="price-btc">$94,210 ↑</span></div>
-    <div class="coin-box">TON <span class="down" id="price-ton">$5.42 ↓</span></div>
-    <div class="coin-box">SOL <span class="up" id="price-sol">$142.1 ↑</span></div>
-    <div class="coin-box">USDT <span class="up">$1.00</span></div>
-</div>
-
-<div class="cyber-header">
-    <div style="font-size: 10px; letter-spacing: 3px; opacity: 0.5;">CORE_BALANCE</div>
-    <div class="bal-val"><span id="bal">0.00</span> <small style="font-size:12px;">TON</small></div>
-</div>
-
-<div id="tab-trade" class="tab-content active-tab">
-    <div class="card">
-        <h3>📊 REAL-TIME ANALYSIS</h3>
-        <div class="chart-container" id="chart"></div>
-        <div id="trade-res" style="text-align:center; font-size:20px; margin:10px 0;">IDLE...</div>
-        <button class="btn-cyber" onclick="play('trade')">OPEN POSITION</button>
+<div id="loader">
+    <div style="font-size: 30px; color: var(--neon-blue); animation: pulse 1s infinite;">
+        <i class="fas fa-atom fa-spin"></i>
     </div>
+    <p style="font-family: 'JetBrains Mono'; margin-top: 20px; letter-spacing: 5px;">QUANTUM_TITAN_V5</p>
 </div>
 
-<div id="tab-games" class="tab-content">
-    <div class="card" style="text-align:center;">
-        <div id="game-res" style="font-size:60px; margin:20px">🎰</div>
-        <select id="gameType" style="width:100%; padding:15px; background:black; color:white; border:1px solid var(--neon); border-radius:10px; margin-bottom:10px;">
-            <option value="slots">SLOTS MACHINE</option>
-            <option value="dice">QUANTUM DICE 🎲</option>
-        </select>
-        <input type="number" id="bet" value="0.2" step="0.1" style="width:100%; padding:15px; background:black; border:1px solid #333; color:white; border-radius:10px; margin-bottom:15px; box-sizing:border-box;">
-        <button class="btn-cyber" onclick="play()">EXECUTE BET</button>
-    </div>
+<div class="ticker-wrap">
+    <div class="ticker-move" id="prices">
+        </div>
 </div>
 
-<div id="tab-squad" class="tab-content">
-    <div class="card">
-        <h3>📡 MISSIONS</h3>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span>JOIN CHANNEL @starrussi</span>
-            <button class="btn-cyber" style="width:auto; padding:10px;" onclick="checkTask()">CHECK</button>
+<div class="header">
+    <span class="status-badge"><i class="fas fa-shield-halved"></i> SECURED NODE</span>
+    <div style="margin: 15px 0;">
+        <div class="balance-title" style="font-size: 12px; opacity: 0.5; letter-spacing: 2px;">AVAILABLE ASSETS</div>
+        <div class="balance-card">
+            <span class="balance-amount" id="user-bal">0.00</span>
+            <span style="font-size: 14px; color: var(--neon-blue);">TON</span>
         </div>
     </div>
-    <div class="card">
-        <h3>👥 SQUAD LINK</h3>
-        <div id="ref-link" style="font-size:10px; background:#000; padding:15px; border:1px dashed var(--neon); word-break:break-all;">...</div>
-        <button class="btn-cyber" style="margin-top:10px;" onclick="shareRef()">SHARE DATA LINK</button>
+</div>
+
+<div id="nav-trade" class="section active-section">
+    <div class="quantum-card">
+        <div style="display:flex; justify-content:space-between; margin-bottom: 15px;">
+            <span><i class="fas fa-chart-line"></i> BTC/TON TERMINAL</span>
+            <span style="color: var(--neon-green)" id="live-price">$98,432.12</span>
+        </div>
+        <div class="chart-container" id="chart"></div>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
+            <button class="btn-cyber" style="background: #00ff88;" onclick="trade('up')">CALL (UP)</button>
+            <button class="btn-cyber" style="background: #ff3e3e;" onclick="trade('down')">PUT (DOWN)</button>
+        </div>
+        <input type="number" id="trade-amount" class="input-cyber" value="0.2">
     </div>
 </div>
 
-<div id="tab-wallet" class="tab-content">
-    <div class="card">
-        <h4>WITHDRAW EXTRACTION</h4>
-        <select id="wMethod" style="width:100%; padding:15px; background:black; color:white; border-radius:10px; margin-bottom:10px;">
-            <option value="CRYPTOBOT">CryptoBot (Min 1 TON)</option>
-            <option value="AIRTEL">Airtel Money (Min 3 TON)</option>
+<div id="nav-games" class="section">
+    <div class="quantum-card" style="text-align:center;">
+        <h3 style="font-family:'JetBrains Mono'">QUANTUM DICE</h3>
+        <div id="dice-visual" style="font-size: 80px; margin: 20px 0; color: var(--neon-purple);">🎲</div>
+        <input type="number" id="dice-amount" class="input-cyber" value="0.1">
+        <button class="btn-cyber" onclick="playDice()">ROLL PROBABILITY</button>
+    </div>
+
+    <div class="quantum-card" style="text-align:center;">
+        <h3 style="font-family:'JetBrains Mono'">NEON SLOTS</h3>
+        <div id="slot-visual" style="font-size: 40px; margin: 20px 0; letter-spacing: 10px;">💎 | 💎 | 💎</div>
+        <button class="btn-cyber" onclick="playSlots()">SPIN MATRIX</button>
+    </div>
+</div>
+
+<div id="nav-tasks" class="section">
+    <div class="quantum-card">
+        <h3><i class="fas fa-tasks"></i> CORE MISSIONS</h3>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:15px; background: rgba(255,255,255,0.05); border-radius:12px;">
+            <div>
+                <div style="font-weight: 900;">Join @starrussi</div>
+                <div style="font-size: 12px; color: var(--neon-blue);">REWARD: 0.25 TON</div>
+            </div>
+            <button class="btn-cyber" style="width:auto; padding:8px 20px;" onclick="verifyTask()">VERIFY</button>
+        </div>
+    </div>
+
+    <div class="quantum-card">
+        <h3><i class="fas fa-user-plus"></i> REFERRAL PROGRAM</h3>
+        <p style="font-size: 13px; opacity:0.7;">Get 0.05 TON for every valid invite.</p>
+        <div id="ref-link" style="font-size: 10px; background: #000; padding: 15px; border-radius: 10px; border: 1px dashed var(--neon-blue); word-break: break-all;">Loading link...</div>
+        <button class="btn-cyber" onclick="shareRef()">SHARE ENCRYPTED LINK</button>
+    </div>
+</div>
+
+<div id="nav-wallet" class="section">
+    <div class="quantum-card">
+        <h3><i class="fas fa-wallet"></i> WITHDRAW ASSETS</h3>
+        <label>Extraction Method</label>
+        <select id="w-method" class="input-cyber">
+            <option value="TON">TON Wallet (Min 1.0)</option>
+            <option value="AIRTEL">Airtel Money (Min 3.0)</option>
         </select>
-        <input type="text" id="wDetails" placeholder="Coordonnées" style="width:100%; padding:15px; background:black; border:1px solid #333; color:white; border-radius:10px; margin-bottom:10px; box-sizing:border-box;">
-        <input type="number" id="wAmt" placeholder="Montant TON" style="width:100%; padding:15px; background:black; border:1px solid #333; color:white; border-radius:10px; margin-bottom:10px; box-sizing:border-box;">
-        <button class="btn-cyber" onclick="withdraw()">START WITHDRAWAL</button>
+        <input type="text" id="w-wallet" class="input-cyber" placeholder="Wallet address or Phone">
+        <input type="number" id="w-amount" class="input-cyber" placeholder="Amount TON">
+        <button class="btn-cyber" style="background: white; color: black;" onclick="requestWithdraw()">CONFIRM EXTRACTION</button>
     </div>
 </div>
 
-<div class="bottom-nav">
-    <div class="nav-item active" onclick="switchTab('trade', this)"><i class="fas fa-chart-line"></i>TRADE</div>
-    <div class="nav-item" onclick="switchTab('games', this)"><i class="fas fa-rocket"></i>PLAY</div>
-    <div class="nav-item" onclick="switchTab('squad', this)"><i class="fas fa-users"></i>SQUAD</div>
-    <div class="nav-item" onclick="switchTab('wallet', this)"><i class="fas fa-wallet"></i>WALLET</div>
-</div>
+<nav class="navbar">
+    <a href="#" class="nav-link active" onclick="showSection('nav-trade', this)"><i class="fas fa-chart-bar"></i>TRADE</a>
+    <a href="#" class="nav-link" onclick="showSection('nav-games', this)"><i class="fas fa-gamepad"></i>GAMES</a>
+    <a href="#" class="nav-link" onclick="showSection('nav-tasks', this)"><i class="fas fa-bolt"></i>TASKS</a>
+    <a href="#" class="nav-link" onclick="showSection('nav-wallet', this)"><i class="fas fa-user-shield"></i>WALLET</a>
+</nav>
 
 <script>
     const tg = window.Telegram.WebApp;
-    const uid = tg.initDataUnsafe.user?.id || 7019851823;
-    const uname = tg.initDataUnsafe.user?.first_name || "Agent";
-    let refLink = "";
+    tg.expand();
+    
+    const API_BASE = window.location.origin;
+    const userId = tg.initDataUnsafe.user?.id || 7019851823;
+    const userName = tg.initDataUnsafe.user?.first_name || "Agent_X";
+    const refParam = new URLSearchParams(window.location.search).get('tgWebAppStartParam');
 
-    function switchTab(id, el) {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
-        document.getElementById('tab-'+id).classList.add('active-tab');
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    let userData = null;
+
+    // --- SYNC ---
+    async function syncData() {
+        try {
+            const r = await fetch(`${API_BASE}/api/sync`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: userId, username: userName, refId: refParam })
+            });
+            const d = await r.json();
+            userData = d.user;
+            document.getElementById('user-bal').innerText = userData.balance.toFixed(3);
+            document.getElementById('ref-link').innerText = d.refLink;
+            hideLoader();
+        } catch (e) { console.error("Sync error", e); }
+    }
+
+    // --- NAVIGATION ---
+    function showSection(id, el) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active-section'));
+        document.getElementById(id).classList.add('active-section');
+        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
         el.classList.add('active');
         tg.HapticFeedback.impactOccurred('medium');
     }
 
-    // Animation de graphique
-    function updateChart() {
-        const chart = document.getElementById('chart');
-        chart.innerHTML = "";
-        for(let i=0; i<15; i++) {
-            const h = Math.floor(Math.random()*80) + 20;
-            chart.innerHTML += `<div class="bar" style="height:${h}px"></div>`;
-        }
-        // Simuler prix
-        document.getElementById('price-btc').innerText = `$${(94000 + Math.random()*500).toFixed(0)} ↑`;
-    }
-    setInterval(updateChart, 2000);
-
-    async function sync() {
-        const r = await fetch('/api/user-data', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, username:uname})
+    // --- TRADING LOGIC ---
+    async function trade(side) {
+        const bet = document.getElementById('trade-amount').value;
+        const res = await fetch(`${API_BASE}/api/play`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: userId, bet, game: 'trade', side })
         });
-        const d = await r.json();
-        document.getElementById('bal').innerText = d.balance.toFixed(2);
-        refLink = d.refLink;
-        document.getElementById('ref-link').innerText = refLink;
-    }
-
-    async function play(type = null) {
-        const bet = document.getElementById('bet').value;
-        const game = type || document.getElementById('gameType').value;
-        tg.HapticFeedback.impactOccurred('heavy');
-
-        const r = await fetch('/api/play', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, bet, game})
-        });
-        const d = await r.json();
+        const data = await res.json();
         
-        if(d.error) return tg.showAlert(d.error);
-
-        if(game === 'trade') {
-            document.getElementById('trade-res').innerText = d.result;
-            document.getElementById('trade-res').className = d.win > 0 ? "up" : "down";
-        } else {
-            document.getElementById('game-res').innerText = Array.isArray(d.result) ? d.result.join('') : d.result;
-        }
+        if(!data.success) return tg.showAlert(data.message);
         
-        tg.HapticFeedback.notificationOccurred(d.win > 0 ? 'success' : 'error');
-        sync();
+        tg.HapticFeedback.notificationOccurred(data.win > 0 ? 'success' : 'error');
+        syncData();
     }
 
-    async function checkTask() {
-        const r = await fetch('/api/check-task', {
-            method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id:uid})
+    // --- GAMES ---
+    async function playDice() {
+        const bet = document.getElementById('dice-amount').value;
+        const res = await fetch(`${API_BASE}/api/play`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: userId, bet, game: 'dice' })
         });
-        const d = await r.json();
-        tg.showAlert(d.message);
-        sync();
+        const data = await res.json();
+        if(!data.success) return tg.showAlert(data.message);
+        
+        document.getElementById('dice-visual').innerText = data.result;
+        syncData();
     }
 
-    async function withdraw() {
-        const amount = document.getElementById('wAmt').value;
-        const method = document.getElementById('wMethod').value;
-        const details = document.getElementById('wDetails').value;
-        const r = await fetch('/api/withdraw', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, amount, method, details})
+    // --- TASKS ---
+    async function verifyTask() {
+        const res = await fetch(`${API_BASE}/api/verify-task`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: userId })
         });
-        const d = await r.json();
-        tg.showAlert(d.message);
-        sync();
+        const data = await res.json();
+        tg.showAlert(data.message);
+        syncData();
+    }
+
+    // --- WITHDRAW ---
+    async function requestWithdraw() {
+        const amount = document.getElementById('w-amount').value;
+        const method = document.getElementById('w-method').value;
+        const wallet = document.getElementById('w-wallet').value;
+
+        const res = await fetch(`${API_BASE}/api/withdraw`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: userId, amount, method, wallet })
+        });
+        const data = await res.json();
+        tg.showAlert(data.message);
+        syncData();
+    }
+
+    // --- CHART ENGINE ---
+    function initChart() {
+        const container = document.getElementById('chart');
+        for(let i=0; i<30; i++) {
+            const h = Math.random() * 80 + 10;
+            const candle = document.createElement('div');
+            candle.className = 'candle';
+            candle.style.height = h + '%';
+            candle.style.background = Math.random() > 0.5 ? '#00ff88' : '#ff3e3e';
+            container.appendChild(candle);
+        }
+    }
+
+    function updateTickers() {
+        const container = document.getElementById('prices');
+        const coins = [
+            {n:'TON', p:'5.42', i:'https://cryptologos.cc/logos/toncoin-ton-logo.png'},
+            {n:'BTC', p:'98,124', i:'https://cryptologos.cc/logos/bitcoin-btc-logo.png'},
+            {n:'SOL', p:'145.2', i:'https://cryptologos.cc/logos/solana-sol-logo.png'},
+            {n:'USDT', p:'1.00', i:'https://cryptologos.cc/logos/tether-usdt-logo.png'}
+        ];
+        container.innerHTML = [...coins, ...coins].map(c => `
+            <div class="ticker-item">
+                <img src="${c.i}"> ${c.n} <span style="color:#00ff88">$${c.p}</span>
+            </div>
+        `).join('');
     }
 
     function shareRef() {
-        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=Join me on STARRUSSI TITAN!`);
+        const link = document.getElementById('ref-link').innerText;
+        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=Join me on Quantum Titan V5!`);
     }
 
-    sync();
-    updateChart();
+    function hideLoader() { setTimeout(() => document.getElementById('loader').style.display = 'none', 1500); }
+
+    // Bootstrap
+    syncData();
+    initChart();
+    updateTickers();
+    setInterval(initChart, 3000); // Live chart feeling
 </script>
 </body>
 </html>
