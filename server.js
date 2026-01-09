@@ -1,139 +1,229 @@
+/**
+ * STARRUSSI TITAN V15 - NEURAL OPERATING SYSTEM
+ * AUTHOR: NOUR / GEMINI AI
+ * COMPLEXITY: LEVEL 10 (INDUSTRIAL)
+ * DESCRIPTION: FULL BACKEND WITH ASYMMETRIC PROBABILITY & PERSISTENT TRANSACTION ENGINE
+ */
+
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
+const path = require('path');
 const cors = require('cors');
+const crypto = require('crypto');
+const http = require('http');
 
-const app = express();
-app.use(express.json());
-app.use(cors());
-app.use(express.static(__dirname));
-
+// --- INITIALIZATION CONFIGURATION ---
 const CONFIG = {
     BOT_TOKEN: '8554964276:AAFXlTNSQXWQy8RhroiqwjcqaSg7lYzY9GU',
     CRYPTO_TOKEN: '510513:AAeEQr2dTYwFbaX56NPAgZluhSt34zua2fc',
     ADMIN_ID: '7019851823',
     CHANNEL_ID: '@starrussi',
-    BOT_USERNAME: 'Newspin_onebot',
     TON_TO_FCFA: 1100,
-    MIN_DEP_STARS: 5,
-    MIN_DEP_TON: 0.2,
-    MIN_WITHDRAW_TON: 1.0,
-    MIN_WITHDRAW_AIRTEL: 3.0
+    DEPOSIT: { MIN_TON: 0.2, MIN_STARS: 5 },
+    WITHDRAW: { MIN_TON: 1.0, MIN_AIRTEL: 3.0 },
+    RNG: { START_WIN_RATE: 0.85, HARD_WIN_RATE: 0.30, THRESHOLD: 3 }
 };
 
-const DB_FILE = './neural_database.json';
-let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
+const DB_PATH = path.join(__dirname, 'neural_titan_core.json');
+const LOG_PATH = path.join(__dirname, 'system_activity.log');
 
-const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 4));
+// --- NEURAL DATABASE ENGINE ---
+let neuralDB = { users: {}, system_stats: { total_bets: 0, total_payouts: 0 } };
 
-// Système d'initialisation avec persistance absolue
-const initUser = (id, username = "Ghost", refId = null) => {
-    const sId = id.toString();
-    if (!db[sId]) {
-        db[sId] = {
-            id: sId,
-            username: username,
-            balance: 0.10,
-            gamesPlayed: 0,
-            invited: 0,
-            isSubscribed: false,
-            lastBonus: null,
-            history: [{type: 'SYSTEM', detail: 'Neural Link Established', amount: 0.10, time: new Date().toLocaleString()}]
-        };
-        // Parrainage
-        if (refId && db[refId.toString()] && refId.toString() !== sId) {
-            db[refId.toString()].balance += 0.05;
-            db[refId.toString()].invited += 1;
-            db[refId.toString()].history.unshift({type: 'REF', detail: `New Ally: ${username}`, amount: 0.05, time: new Date().toLocaleString()});
+function loadNeuralMatrix() {
+    if (fs.existsSync(DB_PATH)) {
+        try {
+            const data = fs.readFileSync(DB_PATH, 'utf8');
+            neuralDB = JSON.parse(data);
+            console.log(">> NEURAL MATRIX LOADED SUCCESSFULLY");
+        } catch (e) {
+            console.error("!! CRITICAL ERROR LOADING DATABASE");
         }
-        saveDB();
     }
-    return db[sId];
+}
+
+function syncNeuralMatrix() {
+    fs.writeFileSync(DB_PATH, JSON.stringify(neuralDB, null, 4));
+}
+
+loadNeuralMatrix();
+
+// --- SECURITY PROTOCOLS ---
+const checkTelegramSubscription = async (userId) => {
+    try {
+        const response = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getChatMember`, {
+            params: { chat_id: CONFIG.CHANNEL_ID, user_id: userId }
+        });
+        const status = response.data.result.status;
+        return ['member', 'administrator', 'creator'].includes(status);
+    } catch (error) { return false; }
 };
 
-// --- LOGIQUE DE PROBABILITÉ ADAPTATIVE ---
-const getWinChance = (gamesCount) => {
-    if (gamesCount <= 3) return 0.85; // 85% de chance de gagner au début
-    return 0.30; // Puis 30% de chance (70% de perte)
-};
+// --- USER ARCHITECTURE ---
+class TitanUser {
+    constructor(id, username, refId = null) {
+        this.id = id.toString();
+        this.username = username || "UnknownAgent";
+        this.balance = 0.05;
+        this.exp = 0;
+        this.level = 1;
+        this.games_played = 0;
+        this.is_subscribed = false;
+        this.referral_count = 0;
+        this.created_at = new Date().toISOString();
+        this.history = [];
+        this.trading_stats = { won: 0, lost: 0, volume: 0 };
+        this.tasks = { channel_joined: false, daily_login: null };
+        this.wallet_address = null;
 
-// --- ROUTES API ---
+        if (refId && neuralDB.users[refId] && refId !== this.id) {
+            neuralDB.users[refId].balance += 0.02;
+            neuralDB.users[refId].referral_count += 1;
+        }
+    }
+}
 
-app.post('/api/sync', async (req, res) => {
+// --- EXPRESS SETUP ---
+const app = express();
+app.use(express.json());
+app.use(cors());
+app.use(express.static(__dirname));
+
+// --- API TITAN V15 ENDPOINTS ---
+
+app.post('/api/auth/sync', async (req, res) => {
     const { id, username, refId } = req.body;
-    const user = initUser(id, username, refId);
-    
-    // Vérification abonnement réelle via API Telegram
-    try {
-        const r = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getChatMember?chat_id=${CONFIG.CHANNEL_ID}&user_id=${id}`);
-        const status = r.data.result.status;
-        user.isSubscribed = ['member', 'administrator', 'creator'].includes(status);
-    } catch (e) { user.isSubscribed = false; }
-    
-    saveDB();
-    res.json({ success: true, user, refLink: `https://t.me/${CONFIG.BOT_USERNAME}?start=${id}` });
-});
+    if (!id) return res.status(400).json({ error: "No Identity Provided" });
 
-// Trading & Games Logic
-app.post('/api/play', (req, res) => {
-    const { id, bet, game, details } = req.body;
-    const user = db[id.toString()];
-    const amount = parseFloat(bet);
+    let user = neuralDB.users[id.toString()];
+    if (!user) {
+        user = new TitanUser(id, username, refId);
+        neuralDB.users[id.toString()] = user;
+    }
 
-    if (!user || user.balance < amount) return res.json({ error: "Balance insuffisante" });
-    if (!user.isSubscribed) return res.json({ error: "Abonnement requis @starrussi" });
+    user.is_subscribed = await checkTelegramSubscription(id);
+    syncNeuralMatrix();
 
-    user.gamesPlayed++;
-    user.balance -= amount; // On déduit d'abord (Sécurité)
-
-    const winChance = getWinChance(user.gamesPlayed);
-    const isWin = Math.random() < winChance;
-    let multiplier = 0;
-
-    if (game === 'dice') multiplier = isWin ? 2.2 : 0;
-    else if (game === 'trading') multiplier = isWin ? 1.9 : 0;
-    else if (game === 'mines') multiplier = isWin ? (1 + (details.mines * 0.4)) : 0;
-
-    const profit = amount * multiplier;
-    if (profit > 0) user.balance += profit;
-
-    user.history.unshift({
-        type: profit > 0 ? 'WIN' : 'LOSS',
-        detail: `Game: ${game.toUpperCase()}`,
-        amount: profit > 0 ? profit : -amount,
-        time: new Date().toLocaleString()
+    res.json({
+        success: true,
+        user: user,
+        refLink: `https://t.me/Newspin_onebot?start=${id}`
     });
-
-    saveDB();
-    res.json({ success: true, win: profit > 0, profit, balance: user.balance });
 });
 
-// Dépôt STARS Séparé
-app.post('/api/deposit/stars', async (req, res) => {
-    const { id, amount } = req.body;
-    if (amount < CONFIG.MIN_DEP_STARS) return res.json({ error: "Min 5 Stars" });
+app.post('/api/engine/play', (req, res) => {
+    const { userId, bet, gameType, gameParams } = req.body;
+    const user = neuralDB.users[userId.toString()];
+    const betAmount = parseFloat(bet);
+
+    if (!user || user.balance < betAmount) return res.json({ error: "Insufficient Neural Credit" });
+    if (!user.is_subscribed) return res.json({ error: "Subscription Required: @starrussi" });
+
+    // Deduct Funds (Atomic Transaction)
+    user.balance -= betAmount;
+    user.games_played += 1;
+
+    // NOUR PROBABILITY ALGORITHM (Dynamic Difficulty)
+    const currentWinRate = user.games_played <= CONFIG.RNG.THRESHOLD ? CONFIG.RNG.START_WIN_RATE : CONFIG.RNG.HARD_WIN_RATE;
+    const isWin = Math.random() < currentWinRate;
+
+    let multiplier = 0;
+    let resultData = {};
+
+    switch (gameType) {
+        case 'DICE':
+            const roll = Math.floor(Math.random() * 6) + 1;
+            multiplier = isWin ? 2.5 : 0;
+            resultData = { roll };
+            break;
+        case 'TRADING':
+            multiplier = isWin ? 1.95 : 0;
+            resultData = { direction: gameParams.direction };
+            break;
+        case 'MINES':
+            const minesCount = gameParams.mines || 3;
+            multiplier = isWin ? (1 + (minesCount * 0.5)) : 0;
+            resultData = { status: isWin ? 'GEM' : 'BOMB' };
+            break;
+        default:
+            return res.json({ error: "Invalid Game Module" });
+    }
+
+    const payout = betAmount * multiplier;
+    if (isWin) {
+        user.balance += payout;
+        user.trading_stats.won += payout;
+    } else {
+        user.trading_stats.lost += betAmount;
+    }
+
+    const transaction = {
+        id: crypto.randomBytes(4).toString('hex'),
+        game: gameType,
+        bet: betAmount,
+        payout: payout,
+        win: isWin,
+        timestamp: new Date().toISOString()
+    };
+    user.history.unshift(transaction);
+    if (user.history.length > 50) user.history.pop();
+
+    syncNeuralMatrix();
+    res.json({ success: true, isWin, payout, balance: user.balance, resultData });
+});
+
+// --- DEPOSIT SEPARATION ---
+app.post('/api/finance/deposit/stars', async (req, res) => {
+    const { userId, amount } = req.body;
+    if (amount < CONFIG.DEPOSIT.MIN_STARS) return res.json({ error: "Minimum 5 Stars" });
     try {
-        const r = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/createInvoiceLink`, {
-            title: "Recharge Stars TITAN",
-            description: `Crédit de ${amount} Stars pour votre compte`,
-            payload: `STARS_${id}`,
+        const link = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/createInvoiceLink`, {
+            title: "STARRUSSI TITAN RECHARGE",
+            description: `Achat de ${amount} Stars`,
+            payload: `STARS_${userId}`,
             currency: "XTR",
             prices: [{ label: "Stars", amount: parseInt(amount) }]
         });
-        res.json({ success: true, url: r.data.result });
-    } catch (e) { res.json({ error: "Erreur API Telegram" }); }
+        res.json({ success: true, url: link.data.result });
+    } catch (e) { res.json({ error: "Stars API Error" }); }
 });
 
-// Dépôt TON (CryptoBot)
-app.post('/api/deposit/ton', async (req, res) => {
-    const { id, amount } = req.body;
-    if (amount < CONFIG.MIN_DEP_TON) return res.json({ error: "Min 0.2 TON" });
+app.post('/api/finance/deposit/ton', async (req, res) => {
+    const { userId, amount } = req.body;
+    if (amount < CONFIG.DEPOSIT.MIN_TON) return res.json({ error: "Minimum 0.2 TON" });
     try {
-        const r = await axios.post('https://pay.crypt.bot/api/createInvoice', {
-            asset: 'TON', amount: amount.toString(), payload: id.toString()
+        const invoice = await axios.post('https://pay.crypt.bot/api/createInvoice', {
+            asset: 'TON', amount: amount.toString(), payload: userId.toString()
         }, { headers: { 'Crypto-Pay-API-Token': CONFIG.CRYPTO_TOKEN } });
-        res.json({ success: true, url: r.data.result.pay_url });
-    } catch (e) { res.json({ error: "Erreur CryptoBot" }); }
+        res.json({ success: true, url: invoice.data.result.pay_url });
+    } catch (e) { res.json({ error: "CryptoBot API Error" }); }
 });
 
-app.listen(3000, () => console.log("TITAN CORE ACTIVE ON PORT 3000"));
+// --- ADMINISTRATIVE NOTIFICATIONS ---
+app.post('/api/finance/withdraw', async (req, res) => {
+    const { userId, amount, method, details } = req.body;
+    const user = neuralDB.users[userId.toString()];
+    const amt = parseFloat(amount);
+    const min = method === 'AIRTEL' ? CONFIG.WITHDRAW.MIN_AIRTEL : CONFIG.WITHDRAW.MIN_TON;
+
+    if (!user || user.balance < amt || amt < min) return res.json({ error: "Invalid Extraction Request" });
+
+    user.balance -= amt;
+    const fcfa = (amt * CONFIG.TON_TO_FCFA).toFixed(0);
+    const adminMsg = `🚨 *EXTRACTION ALERT*\n\nUser: ${user.username} (\`${userId}\`)\nAmount: ${amt} TON\nValue: ${fcfa} FCFA\nMethod: ${method}\nDetails: \`${details}\``;
+
+    await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, {
+        chat_id: CONFIG.ADMIN_ID, text: adminMsg, parse_mode: 'Markdown'
+    });
+
+    syncNeuralMatrix();
+    res.json({ success: true, message: "Request queued for manual verification." });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`\n====================================`);
+    console.log(`TITAN NEURAL OS RUNNING ON PORT ${PORT}`);
+    console.log(`====================================\n`);
+});
