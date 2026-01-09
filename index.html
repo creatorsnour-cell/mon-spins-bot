@@ -3,392 +3,293 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QUANTUM TITAN V5</title>
+    <title>STARRUSSI V6 ULTIMATE</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;500;900&display=swap');
-
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono&display=swap');
+        
         :root {
-            --neon-blue: #00d2ff;
-            --neon-green: #00ff88;
-            --neon-purple: #9d00ff;
-            --danger: #ff3e3e;
-            --bg-dark: #02040a;
-            --glass: rgba(255, 255, 255, 0.03);
-            --border: rgba(255, 255, 255, 0.1);
+            --primary: #00f2ff; --accent: #7000ff; --bg: #03050a; --glass: rgba(255, 255, 255, 0.05); --success: #00ff88; --error: #ff3e3e;
         }
 
         body {
-            background-color: var(--bg-dark);
-            color: #e0e0e0;
-            font-family: 'Outfit', sans-serif;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-            background-image: radial-gradient(circle at 50% -20%, #1a1f35 0%, transparent 50%);
+            background-color: var(--bg); color: #fff; font-family: 'Space Grotesk', sans-serif;
+            margin: 0; padding: 0; overflow-x: hidden;
+            background-image: radial-gradient(circle at top right, #1a1033, transparent), radial-gradient(circle at bottom left, #0a1a2b, transparent);
         }
 
-        /* Loading Screen */
+        /* Loading Overlay */
         #loader {
-            position: fixed; top:0; left:0; width:100%; height:100%;
-            background: var(--bg-dark); z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
-        /* Header Architecture */
+        /* Top Header */
         .header {
-            padding: 40px 20px 30px;
-            text-align: center;
-            border-bottom: 1px solid var(--border);
-            backdrop-filter: blur(10px);
+            padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(15px);
+            position: sticky; top: 0; z-index: 100;
         }
 
-        .balance-card {
-            background: var(--glass);
-            border: 1px solid var(--border);
-            padding: 20px;
-            border-radius: 24px;
-            display: inline-block;
-            min-width: 200px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        .balance-label { font-size: 11px; opacity: 0.5; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
+        .balance-value { font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 700; color: var(--primary); text-shadow: 0 0 20px rgba(0,242,255,0.4); }
+
+        /* Real-time Ticker */
+        .ticker {
+            background: rgba(0,0,0,0.5); padding: 10px 0; border-bottom: 1px solid var(--glass);
+            display: flex; gap: 25px; overflow: hidden; font-size: 12px; font-family: 'JetBrains Mono';
+        }
+        .ticker-item { display: flex; align-items: center; gap: 5px; white-space: nowrap; animation: slide 20s linear infinite; }
+        @keyframes slide { from { transform: translateX(100%); } to { transform: translateX(-100%); } }
+
+        /* Main Container */
+        .content { padding: 20px; padding-bottom: 100px; }
+
+        .card {
+            background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+            padding: 20px; margin-bottom: 20px; backdrop-filter: blur(10px);
         }
 
-        .balance-amount {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 42px;
-            font-weight: 900;
-            color: var(--neon-blue);
-            text-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
-        }
-
-        /* Crypto Ticker */
-        .ticker-wrap {
-            background: rgba(0,0,0,0.5);
-            border-bottom: 1px solid var(--border);
-            padding: 8px 0;
-            display: flex;
-            gap: 30px;
-            overflow: hidden;
-        }
-
-        .ticker-move {
-            display: flex;
-            gap: 40px;
-            animation: ticker 30s linear infinite;
-            white-space: nowrap;
-        }
-
-        .ticker-item { font-size: 12px; font-family: 'JetBrains Mono'; display: flex; align-items: center; gap: 8px; }
-        .ticker-item img { width: 16px; height: 16px; }
-
-        @keyframes ticker {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-
-        /* Navigation Menu */
+        /* Custom Tabs */
         .navbar {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            width: 90%; max-width: 400px;
-            background: rgba(15, 20, 35, 0.85);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 25px;
-            display: flex; justify-content: space-around;
-            padding: 12px; z-index: 1000;
+            position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 450px; background: rgba(10,15,30,0.9);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 25px;
+            display: flex; justify-content: space-around; padding: 12px; z-index: 1000;
+        }
+        .nav-item { color: #555; text-decoration: none; display: flex; flex-direction: column; align-items: center; font-size: 10px; gap: 4px; transition: 0.3s; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item i { font-size: 20px; }
+
+        /* Trading Chart Sim */
+        .chart-box { height: 150px; background: #000; border-radius: 12px; margin: 15px 0; display: flex; align-items: flex-end; gap: 3px; padding: 10px; overflow: hidden; }
+        .bar { flex: 1; border-radius: 1px; transition: 0.5s ease; }
+
+        /* Buttons & Inputs */
+        .btn-p {
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border: none; color: #000; padding: 16px; width: 100%; border-radius: 15px;
+            font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 10px;
+        }
+        .input-p {
+            background: #000; border: 1px solid #333; color: #fff; padding: 14px;
+            width: 100%; border-radius: 12px; box-sizing: border-box; margin: 8px 0; font-family: 'JetBrains Mono';
         }
 
-        .nav-link {
-            color: #666; font-size: 11px; text-decoration: none;
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            transition: 0.3s;
-        }
+        .section { display: none; animation: fadeInUp 0.4s ease; }
+        .active-sec { display: block; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        .nav-link.active { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
-        .nav-link i { font-size: 20px; }
-
-        /* Sections */
-        .section { display: none; padding: 20px; padding-bottom: 120px; animation: fadeIn 0.5s ease; }
-        .active-section { display: block; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Trading & Games UI */
-        .quantum-card {
-            background: var(--glass);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .chart-container {
-            height: 180px; width: 100%;
-            background: #000; border-radius: 12px;
-            position: relative; overflow: hidden;
-            display: flex; align-items: flex-end; gap: 3px; padding: 10px;
-        }
-
-        .candle {
-            flex: 1; border-radius: 2px;
-            transition: height 0.5s ease;
-        }
-
-        .btn-cyber {
-            background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
-            color: #000; border: none; padding: 16px; border-radius: 15px;
-            width: 100%; font-weight: 900; font-family: 'Outfit';
-            letter-spacing: 1px; cursor: pointer; margin-top: 10px;
-        }
-
-        .input-cyber {
-            background: rgba(0,0,0,0.4);
-            border: 1px solid var(--border);
-            color: white; padding: 15px; border-radius: 12px;
-            width: 100%; box-sizing: border-box; font-family: 'JetBrains Mono';
-            margin: 10px 0;
-        }
-
-        .status-badge {
-            font-size: 10px; padding: 4px 10px; border-radius: 20px;
-            background: rgba(0,255,136,0.1); color: var(--neon-green);
-        }
-
+        .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .game-card { background: var(--glass); padding: 25px; border-radius: 18px; text-align: center; border: 1px solid transparent; }
+        .game-card:active { border-color: var(--primary); transform: scale(0.97); }
     </style>
 </head>
 <body>
 
 <div id="loader">
-    <div style="font-size: 30px; color: var(--neon-blue); animation: pulse 1s infinite;">
-        <i class="fas fa-atom fa-spin"></i>
-    </div>
-    <p style="font-family: 'JetBrains Mono'; margin-top: 20px; letter-spacing: 5px;">QUANTUM_TITAN_V5</p>
+    <i class="fas fa-circle-notch fa-spin" style="font-size: 40px; color: var(--primary);"></i>
+    <p style="margin-top: 20px; letter-spacing: 4px; font-weight: 300;">INITIALIZING QUANTUM CORE...</p>
 </div>
 
-<div class="ticker-wrap">
-    <div class="ticker-move" id="prices">
-        </div>
+<div class="ticker">
+    <div class="ticker-item"><i class="fab fa-bitcoin" style="color:#f7931a"></i> BTC <span id="p-btc">$97,542</span></div>
+    <div class="ticker-item"><i class="fas fa-gem" style="color:#0088cc"></i> TON <span id="p-ton">$5.32</span></div>
+    <div class="ticker-item"><i class="fas fa-bolt" style="color:#8247e5"></i> SOL <span id="p-sol">$142.1</span></div>
 </div>
 
 <div class="header">
-    <span class="status-badge"><i class="fas fa-shield-halved"></i> SECURED NODE</span>
-    <div style="margin: 15px 0;">
-        <div class="balance-title" style="font-size: 12px; opacity: 0.5; letter-spacing: 2px;">AVAILABLE ASSETS</div>
-        <div class="balance-card">
-            <span class="balance-amount" id="user-bal">0.00</span>
-            <span style="font-size: 14px; color: var(--neon-blue);">TON</span>
-        </div>
-    </div>
+    <div class="balance-label">Quantum Balance</div>
+    <div class="balance-value"><span id="u-bal">0.00</span> <small style="font-size: 14px;">TON</small></div>
 </div>
 
-<div id="nav-trade" class="section active-section">
-    <div class="quantum-card">
-        <div style="display:flex; justify-content:space-between; margin-bottom: 15px;">
-            <span><i class="fas fa-chart-line"></i> BTC/TON TERMINAL</span>
-            <span style="color: var(--neon-green)" id="live-price">$98,432.12</span>
-        </div>
-        <div class="chart-container" id="chart"></div>
-        
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:20px;">
-            <button class="btn-cyber" style="background: #00ff88;" onclick="trade('up')">CALL (UP)</button>
-            <button class="btn-cyber" style="background: #ff3e3e;" onclick="trade('down')">PUT (DOWN)</button>
-        </div>
-        <input type="number" id="trade-amount" class="input-cyber" value="0.2">
-    </div>
-</div>
-
-<div id="nav-games" class="section">
-    <div class="quantum-card" style="text-align:center;">
-        <h3 style="font-family:'JetBrains Mono'">QUANTUM DICE</h3>
-        <div id="dice-visual" style="font-size: 80px; margin: 20px 0; color: var(--neon-purple);">🎲</div>
-        <input type="number" id="dice-amount" class="input-cyber" value="0.1">
-        <button class="btn-cyber" onclick="playDice()">ROLL PROBABILITY</button>
-    </div>
-
-    <div class="quantum-card" style="text-align:center;">
-        <h3 style="font-family:'JetBrains Mono'">NEON SLOTS</h3>
-        <div id="slot-visual" style="font-size: 40px; margin: 20px 0; letter-spacing: 10px;">💎 | 💎 | 💎</div>
-        <button class="btn-cyber" onclick="playSlots()">SPIN MATRIX</button>
-    </div>
-</div>
-
-<div id="nav-tasks" class="section">
-    <div class="quantum-card">
-        <h3><i class="fas fa-tasks"></i> CORE MISSIONS</h3>
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:15px; background: rgba(255,255,255,0.05); border-radius:12px;">
-            <div>
-                <div style="font-weight: 900;">Join @starrussi</div>
-                <div style="font-size: 12px; color: var(--neon-blue);">REWARD: 0.25 TON</div>
+<div class="content">
+    
+    <div id="sec-trade" class="section active-sec">
+        <div class="card">
+            <div style="display:flex; justify-content:space-between;">
+                <span><i class="fas fa-chart-line"></i> LIVE TERMINAL</span>
+                <span style="color:var(--success)">+2.45%</span>
             </div>
-            <button class="btn-cyber" style="width:auto; padding:8px 20px;" onclick="verifyTask()">VERIFY</button>
+            <div class="chart-box" id="main-chart"></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="btn-p" style="background:var(--success)" onclick="play('trade', 'up')">CALL (UP)</button>
+                <button class="btn-p" style="background:var(--error)" onclick="play('trade', 'down')">PUT (DOWN)</button>
+            </div>
+            <input type="number" id="trade-bet" class="input-p" value="0.2">
         </div>
     </div>
 
-    <div class="quantum-card">
-        <h3><i class="fas fa-user-plus"></i> REFERRAL PROGRAM</h3>
-        <p style="font-size: 13px; opacity:0.7;">Get 0.05 TON for every valid invite.</p>
-        <div id="ref-link" style="font-size: 10px; background: #000; padding: 15px; border-radius: 10px; border: 1px dashed var(--neon-blue); word-break: break-all;">Loading link...</div>
-        <button class="btn-cyber" onclick="shareRef()">SHARE ENCRYPTED LINK</button>
+    <div id="sec-games" class="section">
+        <div class="game-grid">
+            <div class="game-card" onclick="openGame('dice')"><i class="fas fa-dice" style="font-size:30px; color:var(--primary)"></i><br><br>DICE</div>
+            <div class="game-card" onclick="openGame('slots')"><i class="fas fa-🎰" style="font-size:30px; color:var(--accent)"></i><br><br>SLOTS</div>
+            <div class="game-card" onclick="openGame('mines')"><i class="fas fa-bomb" style="font-size:30px; color:var(--error)"></i><br><br>MINES</div>
+            <div class="game-card" onclick="tg.showAlert('Coming Soon')"><i class="fas fa-rocket"></i><br><br>CRASH</div>
+        </div>
     </div>
-</div>
 
-<div id="nav-wallet" class="section">
-    <div class="quantum-card">
-        <h3><i class="fas fa-wallet"></i> WITHDRAW ASSETS</h3>
-        <label>Extraction Method</label>
-        <select id="w-method" class="input-cyber">
-            <option value="TON">TON Wallet (Min 1.0)</option>
-            <option value="AIRTEL">Airtel Money (Min 3.0)</option>
-        </select>
-        <input type="text" id="w-wallet" class="input-cyber" placeholder="Wallet address or Phone">
-        <input type="number" id="w-amount" class="input-cyber" placeholder="Amount TON">
-        <button class="btn-cyber" style="background: white; color: black;" onclick="requestWithdraw()">CONFIRM EXTRACTION</button>
+    <div id="sec-wallet" class="section">
+        <div class="card">
+            <h3><i class="fas fa-plus-circle"></i> DEPOSIT</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="btn-p" style="background:#ffcc00; color:#000;" onclick="showDep('STARS')"><i class="fas fa-star"></i> STARS</button>
+                <button class="btn-p" style="background:#0088cc; color:#fff;" onclick="showDep('TON')"><i class="fas fa-gem"></i> TON (BOT)</button>
+            </div>
+            <div id="dep-ui" style="display:none; margin-top:15px;">
+                <input type="number" id="dep-amt" class="input-p" placeholder="Montant">
+                <button class="btn-p" id="dep-exec" onclick="execDeposit()">CONFIRM DEPOSIT</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3><i class="fas fa-wallet"></i> WITHDRAW</h3>
+            <select id="w-method" class="input-p">
+                <option value="CRYPTOBOT">TON (CryptoBot)</option>
+                <option value="AIRTEL">Airtel Money (FCFA)</option>
+            </select>
+            <input type="text" id="w-details" class="input-p" placeholder="Wallet or Number">
+            <input type="number" id="w-amt" class="input-p" placeholder="Amount TON">
+            <button class="btn-p" onclick="withdraw()">WITHDRAW ASSETS</button>
+        </div>
     </div>
+
+    <div id="sec-tasks" class="section">
+        <div class="card">
+            <h3>TASKS & AIRDROPS</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.05); padding:15px; border-radius:12px;">
+                <span>Join @starrussi (+0.20 TON)</span>
+                <button class="btn-p" style="width:auto; padding:8px 15px;" onclick="verifyTask()">VERIFY</button>
+            </div>
+        </div>
+        <div class="card">
+            <h3>FRIENDS</h3>
+            <p style="font-size:12px; opacity:0.6;">Get 0.05 TON for every active user invited.</p>
+            <div id="ref-box" style="background:#000; padding:12px; border-radius:10px; font-size:10px; border: 1px dashed var(--primary); margin:10px 0;">Loading...</div>
+            <button class="btn-p" onclick="shareRef()">COPY & SHARE LINK</button>
+        </div>
+    </div>
+
 </div>
 
 <nav class="navbar">
-    <a href="#" class="nav-link active" onclick="showSection('nav-trade', this)"><i class="fas fa-chart-bar"></i>TRADE</a>
-    <a href="#" class="nav-link" onclick="showSection('nav-games', this)"><i class="fas fa-gamepad"></i>GAMES</a>
-    <a href="#" class="nav-link" onclick="showSection('nav-tasks', this)"><i class="fas fa-bolt"></i>TASKS</a>
-    <a href="#" class="nav-link" onclick="showSection('nav-wallet', this)"><i class="fas fa-user-shield"></i>WALLET</a>
+    <a href="javascript:void(0)" class="nav-item active" onclick="nav('sec-trade', this)"><i class="fas fa-chart-pie"></i>Trade</a>
+    <a href="javascript:void(0)" class="nav-item" onclick="nav('sec-games', this)"><i class="fas fa-gamepad"></i>Games</a>
+    <a href="javascript:void(0)" class="nav-item" onclick="nav('sec-tasks', this)"><i class="fas fa-users"></i>Earn</a>
+    <a href="javascript:void(0)" class="nav-item" onclick="nav('sec-wallet', this)"><i class="fas fa-wallet"></i>Wallet</a>
 </nav>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
     
-    const API_BASE = window.location.origin;
+    let currentDepAsset = '';
     const userId = tg.initDataUnsafe.user?.id || 7019851823;
-    const userName = tg.initDataUnsafe.user?.first_name || "Agent_X";
+    const userName = tg.initDataUnsafe.user?.username || "Agent";
     const refParam = new URLSearchParams(window.location.search).get('tgWebAppStartParam');
 
-    let userData = null;
-
-    // --- SYNC ---
-    async function syncData() {
-        try {
-            const r = await fetch(`${API_BASE}/api/sync`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: userId, username: userName, refId: refParam })
-            });
-            const d = await r.json();
-            userData = d.user;
-            document.getElementById('user-bal').innerText = userData.balance.toFixed(3);
-            document.getElementById('ref-link').innerText = d.refLink;
-            hideLoader();
-        } catch (e) { console.error("Sync error", e); }
+    // --- Core Sync ---
+    async function sync() {
+        const r = await fetch('/api/sync', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:userId, username:userName, refId:refParam})
+        });
+        const d = await r.json();
+        document.getElementById('u-bal').innerText = d.user.balance.toFixed(3);
+        document.getElementById('ref-box').innerText = d.refLink;
+        setTimeout(() => document.getElementById('loader').style.display = 'none', 1200);
     }
 
-    // --- NAVIGATION ---
-    function showSection(id, el) {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active-section'));
-        document.getElementById(id).classList.add('active-section');
-        document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    // --- Navigation ---
+    function nav(id, el) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active-sec'));
+        document.getElementById(id).classList.add('active-sec');
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         el.classList.add('active');
-        tg.HapticFeedback.impactOccurred('medium');
+        tg.HapticFeedback.impactOccurred('light');
     }
 
-    // --- TRADING LOGIC ---
-    async function trade(side) {
-        const bet = document.getElementById('trade-amount').value;
-        const res = await fetch(`${API_BASE}/api/play`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id: userId, bet, game: 'trade', side })
+    // --- Game Logic ---
+    async function play(game, type = '') {
+        const bet = document.getElementById('trade-bet').value;
+        const r = await fetch('/api/action/play', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:userId, bet, game, type})
         });
-        const data = await res.json();
+        const d = await r.json();
+        if(!d.success) return tg.showAlert(d.message);
         
-        if(!data.success) return tg.showAlert(data.message);
-        
-        tg.HapticFeedback.notificationOccurred(data.win > 0 ? 'success' : 'error');
-        syncData();
+        tg.HapticFeedback.notificationOccurred(d.win > 0 ? 'success' : 'error');
+        if(game === 'trade') {
+            tg.showScanQrPopup({ text: d.win > 0 ? `GAIN: +${d.win} TON` : "PERTE" });
+            setTimeout(() => tg.closeScanQrPopup(), 1500);
+        }
+        sync();
     }
 
-    // --- GAMES ---
-    async function playDice() {
-        const bet = document.getElementById('dice-amount').value;
-        const res = await fetch(`${API_BASE}/api/play`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id: userId, bet, game: 'dice' })
+    // --- Deposit ---
+    function showDep(asset) {
+        currentDepAsset = asset;
+        document.getElementById('dep-ui').style.display = 'block';
+        document.getElementById('dep-exec').innerText = `PAY WITH ${asset}`;
+    }
+
+    async function execDeposit() {
+        const amt = document.getElementById('dep-amt').value;
+        const endpoint = currentDepAsset === 'STARS' ? '/api/deposit/stars' : '/api/deposit/ton';
+        const r = await fetch(endpoint, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:userId, amount:amt})
         });
-        const data = await res.json();
-        if(!data.success) return tg.showAlert(data.message);
-        
-        document.getElementById('dice-visual').innerText = data.result;
-        syncData();
+        const d = await r.json();
+        if(d.url) tg.openTelegramLink(d.url); else tg.showAlert(d.message || "Erreur");
     }
 
-    // --- TASKS ---
-    async function verifyTask() {
-        const res = await fetch(`${API_BASE}/api/verify-task`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id: userId })
-        });
-        const data = await res.json();
-        tg.showAlert(data.message);
-        syncData();
-    }
-
-    // --- WITHDRAW ---
-    async function requestWithdraw() {
-        const amount = document.getElementById('w-amount').value;
+    // --- Withdraw ---
+    async function withdraw() {
+        const amount = document.getElementById('w-amt').value;
         const method = document.getElementById('w-method').value;
-        const wallet = document.getElementById('w-wallet').value;
-
-        const res = await fetch(`${API_BASE}/api/withdraw`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ id: userId, amount, method, wallet })
+        const details = document.getElementById('w-details').value;
+        const r = await fetch('/api/withdraw', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:userId, amount, method, details})
         });
-        const data = await res.json();
-        tg.showAlert(data.message);
-        syncData();
+        const d = await r.json();
+        tg.showAlert(d.message);
+        sync();
     }
 
-    // --- CHART ENGINE ---
-    function initChart() {
-        const container = document.getElementById('chart');
+    async function verifyTask() {
+        const r = await fetch('/api/verify-task', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({id:userId})
+        });
+        const d = await r.json();
+        tg.showAlert(d.message);
+        sync();
+    }
+
+    // --- Chart Simulation ---
+    function renderChart() {
+        const chart = document.getElementById('main-chart');
+        chart.innerHTML = '';
         for(let i=0; i<30; i++) {
             const h = Math.random() * 80 + 10;
-            const candle = document.createElement('div');
-            candle.className = 'candle';
-            candle.style.height = h + '%';
-            candle.style.background = Math.random() > 0.5 ? '#00ff88' : '#ff3e3e';
-            container.appendChild(candle);
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            bar.style.height = h + '%';
+            bar.style.background = Math.random() > 0.4 ? 'var(--success)' : 'var(--error)';
+            chart.appendChild(bar);
         }
     }
 
-    function updateTickers() {
-        const container = document.getElementById('prices');
-        const coins = [
-            {n:'TON', p:'5.42', i:'https://cryptologos.cc/logos/toncoin-ton-logo.png'},
-            {n:'BTC', p:'98,124', i:'https://cryptologos.cc/logos/bitcoin-btc-logo.png'},
-            {n:'SOL', p:'145.2', i:'https://cryptologos.cc/logos/solana-sol-logo.png'},
-            {n:'USDT', p:'1.00', i:'https://cryptologos.cc/logos/tether-usdt-logo.png'}
-        ];
-        container.innerHTML = [...coins, ...coins].map(c => `
-            <div class="ticker-item">
-                <img src="${c.i}"> ${c.n} <span style="color:#00ff88">$${c.p}</span>
-            </div>
-        `).join('');
-    }
-
     function shareRef() {
-        const link = document.getElementById('ref-link').innerText;
-        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=Join me on Quantum Titan V5!`);
+        const link = document.getElementById('ref-box').innerText;
+        const text = encodeURIComponent("Rejoins-moi sur STARRUSSI V6 et gagne du TON !");
+        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`);
     }
 
-    function hideLoader() { setTimeout(() => document.getElementById('loader').style.display = 'none', 1500); }
-
-    // Bootstrap
-    syncData();
-    initChart();
-    updateTickers();
-    setInterval(initChart, 3000); // Live chart feeling
+    setInterval(renderChart, 2000);
+    sync();
 </script>
 </body>
 </html>
