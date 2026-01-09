@@ -3,186 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>STARRUSSI TITAN V12</title>
+    <title>WIN | Spin </title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Titillium+Web:wght@300;600;900&display=swap');
-
         :root {
-            --neon: #00f2ff;
-            --danger: #ff004c;
-            --gold: #ffcc00;
-            --bg: #020408;
-            --card: rgba(16, 20, 30, 0.9);
+            --neon-blue: #00d2ff; --neon-red: #ff0055; --neon-green: #00ffa3;
+            --cyber-black: #050608; --cyber-card: #0d1117; --glass: rgba(13, 17, 23, 0.85);
         }
 
         body {
-            background: var(--bg); color: white; font-family: 'Titillium Web', sans-serif;
-            margin: 0; padding-bottom: 90px; overflow-x: hidden;
-            background-image: radial-gradient(circle at top right, #0a1220, #020408);
+            background: var(--cyber-black); color: white; font-family: 'Space Grotesk', sans-serif;
+            margin: 0; padding: 0; overflow-x: hidden; user-select: none;
         }
 
-        /* Verification Overlay */
-        #lock-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); z-index: 10000; display: none;
+        /* Neural Background Animation */
+        #bg-canvas { position: fixed; top:0; left:0; z-index: -1; filter: blur(50px); opacity: 0.3; }
+
+        /* Locked Screen Overlay */
+        #neural-lock {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--cyber-black); z-index: 99999; display: flex;
             flex-direction: column; align-items: center; justify-content: center; text-align: center;
         }
 
         .header {
-            padding: 30px 20px; background: linear-gradient(180deg, rgba(0,242,255,0.1) 0%, transparent 100%);
-            border-bottom: 1px solid rgba(0,242,255,0.3); text-align: center;
+            padding: 40px 20px; text-align: center; border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+            background: linear-gradient(180deg, rgba(0,210,255,0.05) 0%, transparent 100%);
         }
 
-        .balance-box { font-family: 'Syncopate'; font-size: 40px; color: var(--neon); text-shadow: 0 0 15px var(--neon); }
-
-        .nav-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 20px; }
-        .nav-item { 
-            background: var(--card); border: 1px solid #1e2533; padding: 15px 5px; 
-            border-radius: 15px; text-align: center; font-size: 10px; transition: 0.3s;
+        .balance-container {
+            font-family: 'Syncopate', sans-serif; font-size: 48px; font-weight: 700;
+            background: linear-gradient(90deg, #fff, var(--neon-blue));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 210, 255, 0.4);
         }
-        .nav-item i { font-size: 20px; display: block; margin-bottom: 5px; color: var(--neon); }
-        .nav-item.active { border-color: var(--neon); box-shadow: 0 0 10px var(--neon); }
 
-        .panel { display: none; padding: 15px; animation: fadeIn 0.5s ease; }
-        .panel.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .main-container { padding: 20px; padding-bottom: 120px; }
 
-        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 15px; border: 1px solid #1e2533; }
-
-        .chart-container { height: 300px; border-radius: 15px; overflow: hidden; margin-bottom: 15px; border: 1px solid var(--neon); }
-
-        .btn-action {
-            width: 100%; padding: 18px; border-radius: 15px; border: none; 
-            font-family: 'Syncopate'; font-weight: bold; cursor: pointer; margin-top: 10px;
+        .card {
+            background: var(--cyber-card); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 24px; padding: 25px; margin-bottom: 20px;
+            backdrop-filter: blur(10px); position: relative; overflow: hidden;
         }
-        .btn-buy { background: #00ff88; color: #000; }
-        .btn-sell { background: var(--danger); color: #fff; }
-        .btn-gold { background: var(--gold); color: #000; }
+
+        /* TradingView Simulation */
+        .trading-view { height: 350px; background: #000; border-radius: 20px; border: 1px solid var(--neon-blue); overflow: hidden; }
+
+        .btn-cyber {
+            width: 100%; padding: 20px; border-radius: 18px; border: none;
+            font-family: 'Syncopate', sans-serif; font-weight: bold; cursor: pointer;
+            text-transform: uppercase; transition: all 0.3s; margin: 10px 0;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+
+        .btn-up { background: var(--neon-green); color: #000; box-shadow: 0 0 20px rgba(0, 255, 163, 0.3); }
+        .btn-down { background: var(--neon-red); color: #fff; box-shadow: 0 0 20px rgba(255, 0, 85, 0.3); }
+        .btn-primary { background: var(--neon-blue); color: #000; }
 
         .cyber-input {
-            width: 100%; background: #000; border: 1px solid #333; padding: 15px;
-            border-radius: 12px; color: #fff; text-align: center; font-size: 18px; margin: 10px 0;
+            width: 100%; background: #000; border: 1px solid #1e2533; padding: 20px;
+            border-radius: 15px; color: white; font-size: 20px; font-weight: bold; text-align: center;
+            box-sizing: border-box; margin-bottom: 15px; outline: none;
         }
 
-        /* Bottom Nav */
-        .bottom-bar {
-            position: fixed; bottom: 0; width: 100%; background: rgba(5, 10, 20, 0.95);
-            display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #1e2533;
+        /* Task & Referral Tab */
+        .task-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05);
         }
+
+        /* Persistent Bottom Navigation */
+        .titan-nav {
+            position: fixed; bottom: 25px; left: 5%; width: 90%;
+            background: var(--glass); backdrop-filter: blur(20px);
+            border-radius: 30px; border: 1px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: space-around; padding: 15px; z-index: 1000;
+        }
+        .nav-link { color: #666; text-decoration: none; text-align: center; flex: 1; transition: 0.3s; }
+        .nav-link.active { color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); }
+        .nav-link i { font-size: 24px; display: block; margin-bottom: 5px; }
+
+        .price-ticker { font-family: monospace; font-size: 14px; color: var(--neon-green); }
     </style>
 </head>
 <body>
 
-<div id="lock-screen">
-    <i class="fas fa-user-shield" style="font-size: 80px; color: var(--danger); margin-bottom: 20px;"></i>
-    <h1 style="font-family: Syncopate;">ACCESS DENIED</h1>
-    <p>Vous devez rejoindre notre canal pour continuer.</p>
-    <button class="btn-action btn-gold" style="width: 80%;" onclick="tg.openTelegramLink('https://t.me/starrussi')">S'ABONNER @STARRUSSI</button>
-    <button class="btn-action" style="width: 80%; background: #222; color: #fff;" onclick="sync()">DÉJÀ ABONNÉ (VÉRIFIER)</button>
+<div id="neural-lock" style="display: none;">
+    <div style="padding: 30px;">
+        <i data-lucide="shield-alert" style="width: 80px; height: 80px; color: var(--neon-red);"></i>
+        <h2 style="font-family: Syncopate;">PROTOCOL LOCKED</h2>
+        <p style="opacity: 0.7;">Veuillez synchroniser votre identité avec notre canal officiel.</p>
+        <button class="btn-cyber btn-primary" onclick="tg.openTelegramLink('https://t.me/starrussi')">JOIN @STARRUSSI</button>
+        <button class="btn-cyber" style="background: #111; color: #fff;" onclick="initializeNeuralLink()">VERIFY CONNECTION</button>
+    </div>
 </div>
 
 <div class="header">
-    <div style="font-size: 12px; opacity: 0.5; letter-spacing: 4px;">NEURAL BALANCE</div>
-    <div class="balance-box"><span id="u-bal">0.000</span> <small style="font-size: 14px;">TON</small></div>
+    <div style="font-size: 10px; letter-spacing: 5px; opacity: 0.4; margin-bottom: 10px;">NEURAL CORE V15.4</div>
+    <div class="balance-container" id="bal-display">0.000</div>
+    <div class="price-ticker">TON/USDT: <span id="ton-price">5.234</span>$</div>
 </div>
 
-<div class="nav-grid">
-    <div class="nav-item active" onclick="showTab('trading', this)"><i class="fas fa-chart-line"></i>TRADE</div>
-    <div class="nav-item" onclick="showTab('games', this)"><i class="fas fa-gamepad"></i>GAMES</div>
-    <div class="nav-item" onclick="showTab('tasks', this)"><i class="fas fa-tasks"></i>TASKS</div>
-    <div class="nav-item" onclick="showTab('wallet', this)"><i class="fas fa-wallet"></i>WALLET</div>
+<div class="main-container">
+
+    <div id="tab-trade" class="tab-panel active">
+        <div class="trading-view">
+            <div id="tv_chart_container"></div>
+        </div>
+        <div class="card" style="margin-top: 20px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:12px; opacity:0.6;">
+                <span>MONTANT DU PARI (TON)</span>
+                <span>MAX: <span id="max-bal">0.00</span></span>
+            </div>
+            <input type="number" id="trade-amount" class="cyber-input" value="0.2" step="0.1">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <button class="btn-cyber btn-up" onclick="executeBet('TRADING', 'UP')">
+                    <i data-lucide="trending-up"></i> CALL
+                </button>
+                <button class="btn-cyber btn-down" onclick="executeBet('TRADING', 'DOWN')">
+                    <i data-lucide="trending-down"></i> PUT
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-games" class="tab-panel" style="display:none;">
+        <div class="card" onclick="executeBet('DICE')">
+            <div style="display:flex; align-items:center; gap:20px;">
+                <div style="background: rgba(0,210,255,0.1); padding:15px; border-radius:15px;">
+                    <i data-lucide="dice-5" style="color:var(--neon-blue)"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;">TITAN DICE</h3>
+                    <small style="color:var(--neon-green)">Win Chance: Adaptive</small>
+                </div>
+            </div>
+        </div>
+        <div class="card" onclick="openMines()">
+            <div style="display:flex; align-items:center; gap:20px;">
+                <div style="background: rgba(255,0,85,0.1); padding:15px; border-radius:15px;">
+                    <i data-lucide="bomb" style="color:var(--neon-red)"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;">NEURAL MINES</h3>
+                    <small style="color:var(--neon-red)">High Risk | 70% House Edge</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-wallet" class="tab-panel" style="display:none;">
+        <div class="card">
+            <h3>DEPOSIT NEURAL CREDITS</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="btn-cyber btn-primary" onclick="initiateDeposit('TON')">TON (CryptoBot)</button>
+                <button class="btn-cyber btn-gold" style="background: #ffa500; color: #000;" onclick="initiateDeposit('STARS')">TELEGRAM STARS</button>
+            </div>
+        </div>
+        <div class="card">
+            <h3>WITHDRAWAL EXTRACTION</h3>
+            <select id="w-method" class="cyber-input" style="font-size:16px;">
+                <option value="TON">TON WALLET (Min 1.0)</option>
+                <option value="AIRTEL">AIRTEL MONEY (Min 3.0)</option>
+            </select>
+            <input type="text" id="w-address" class="cyber-input" placeholder="Address or Phone">
+            <input type="number" id="w-amount" class="cyber-input" placeholder="Amount TON">
+            <button class="btn-cyber btn-down" onclick="executeWithdraw()">EXTRACT FUNDS</button>
+        </div>
+    </div>
+
 </div>
 
-<div id="tab-trading" class="panel active">
-    <div class="chart-container">
-        <div id="tv_chart"></div>
-    </div>
-    <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="color: var(--neon);"><i class="fas fa-bolt"></i> QUICK TRADE</span>
-            <span id="price-ticker" style="font-family: monospace; color: #00ff88;">$--.---</span>
-        </div>
-        <input type="number" id="trade-bet" class="cyber-input" value="0.2">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button class="btn-action btn-buy" onclick="playGame('trading', 'UP')">CALL (UP)</button>
-            <button class="btn-action btn-sell" onclick="playGame('trading', 'DOWN')">PUT (DOWN)</button>
-        </div>
-    </div>
-</div>
+<nav class="titan-nav">
+    <a href="javascript:void(0)" class="nav-link active" onclick="switchTab('trade', this)"><i data-lucide="line-chart"></i>TRADE</a>
+    <a href="javascript:void(0)" class="nav-link" onclick="switchTab('games', this)"><i data-lucide="gamepad-2"></i>GAMES</a>
+    <a href="javascript:void(0)" class="nav-link" onclick="switchTab('wallet', this)"><i data-lucide="wallet"></i>WALLET</a>
+</nav>
 
-<div id="tab-games" class="panel">
-    <div class="card" onclick="playDice()">
-        <div style="display: flex; justify-content: space-between;">
-            <span><i class="fas fa-dice" style="color:var(--neon)"></i> <b>CYBER DICE</b></span>
-            <span style="color: #00ff88;">x2.20</span>
-        </div>
-    </div>
-    <div class="card" onclick="tg.showAlert('Mines Engine Booting...')">
-        <div style="display: flex; justify-content: space-between;">
-            <span><i class="fas fa-bomb" style="color:var(--danger)"></i> <b>TITAN MINES</b></span>
-            <span style="color: var(--gold);">MULTI-LEVEL</span>
-        </div>
-    </div>
-</div>
-
-<div id="tab-wallet" class="panel">
-    <div class="card">
-        <h3>DÉPÔT</h3>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <button class="btn-action" style="background:#0088cc;" onclick="openDep('TON')">TON (Bot)</button>
-            <button class="btn-action" style="background:#ffaa00;" onclick="openDep('STARS')">STARS</button>
-        </div>
-        <div id="dep-form" style="display:none; margin-top:20px;">
-            <input type="number" id="dep-amt" class="cyber-input" placeholder="Montant">
-            <button class="btn-action btn-buy" onclick="processDeposit()">PAYER MAINTENANT</button>
-        </div>
-    </div>
-    <div class="card">
-        <h3>RETRAIT</h3>
-        <select id="w-method" class="cyber-input">
-            <option value="TON">TON WALLET (Min 1.0)</option>
-            <option value="AIRTEL">AIRTEL MONEY (Min 3.0)</option>
-        </select>
-        <input type="text" id="w-details" class="cyber-input" placeholder="Adresse ou Numéro">
-        <input type="number" id="w-amt" class="cyber-input" placeholder="Montant">
-        <button class="btn-action btn-sell" onclick="processWithdraw()">EXTRAIRE LES FONDS</button>
-    </div>
-</div>
-
-<script src="https://s3.tradingview.com/tv.js"></script>
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
-    const uname = tg.initDataUnsafe.user?.first_name || "Agent";
-    let depMode = '';
+    const username = tg.initDataUnsafe.user?.first_name || "Agent";
 
-    async function sync() {
-        const r = await fetch('/api/sync', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, username:uname})
-        });
-        const d = await r.json();
-        document.getElementById('u-bal').innerText = d.user.balance.toFixed(3);
-        
-        if(!d.user.isSubscribed) {
-            document.getElementById('lock-screen').style.display = 'flex';
-        } else {
-            document.getElementById('lock-screen').style.display = 'none';
-        }
-    }
-
-    function showTab(tab, el) {
-        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        document.getElementById('tab-'+tab).classList.add('active');
-        el.classList.add('active');
-        tg.HapticFeedback.impactOccurred('light');
-    }
-
-    // TradingView Integration
+    // --- TRADING VIEW INTEGRATION ---
     new TradingView.widget({
         "autosize": true,
         "symbol": "BINANCE:TONUSDT",
@@ -190,44 +197,110 @@
         "timezone": "Etc/UTC",
         "theme": "dark",
         "style": "1",
-        "container_id": "tv_chart",
+        "locale": "fr",
+        "container_id": "tv_chart_container",
         "hide_top_toolbar": true,
         "hide_legend": true,
         "save_image": false,
-        "backgroundColor": "rgba(2, 4, 8, 1)"
+        "backgroundColor": "rgba(5, 6, 8, 1)",
+        "gridColor": "rgba(255, 255, 255, 0.02)"
     });
 
-    async function playGame(game, dir = '') {
-        const bet = document.getElementById('trade-bet').value;
-        const r = await fetch('/api/play', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, bet, game, details: {dir}})
+    async function initializeNeuralLink() {
+        try {
+            const r = await fetch('/api/auth/sync', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: uid, username: username})
+            });
+            const d = await r.json();
+            
+            if(!d.user.is_subscribed) {
+                document.getElementById('neural-lock').style.display = 'flex';
+            } else {
+                document.getElementById('neural-lock').style.display = 'none';
+                updateUI(d.user);
+            }
+        } catch (e) { tg.showAlert("Erreur de connexion au Neural Core"); }
+    }
+
+    function updateUI(user) {
+        document.getElementById('bal-display').innerText = user.balance.toFixed(3);
+        document.getElementById('max-bal').innerText = user.balance.toFixed(2);
+    }
+
+    async function executeBet(type, direction = '') {
+        const bet = document.getElementById('trade-amount').value;
+        tg.HapticFeedback.impactOccurred('medium');
+
+        const r = await fetch('/api/engine/play', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                userId: uid,
+                bet: bet,
+                gameType: type,
+                gameParams: { direction: direction, mines: 3 }
+            })
         });
+
         const d = await r.json();
         if(d.error) return tg.showAlert(d.error);
+
+        if(d.isWin) {
+            tg.HapticFeedback.notificationOccurred('success');
+            tg.showAlert(`✅ SUCCESS: +${d.payout.toFixed(2)} TON`);
+        } else {
+            tg.HapticFeedback.notificationOccurred('error');
+            tg.showAlert(`❌ NEURAL ERROR: Loss of ${bet} TON`);
+        }
+        initializeNeuralLink();
+    }
+
+    function switchTab(tabId, el) {
+        document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        document.getElementById('tab-' + tabId).style.display = 'block';
+        el.classList.add('active');
+        tg.HapticFeedback.impactOccurred('light');
+    }
+
+    async function initiateDeposit(mode) {
+        const amt = prompt("Entrez le montant de dépôt :");
+        if(!amt) return;
         
-        tg.HapticFeedback.notificationOccurred(d.win ? 'success' : 'error');
-        tg.showAlert(d.win ? `GAGNÉ ! +${d.profit.toFixed(2)} TON` : "PERDU ! La probabilité Titan a été plus forte.");
-        sync();
-    }
-
-    function openDep(mode) {
-        depMode = mode;
-        document.getElementById('dep-form').style.display = 'block';
-    }
-
-    async function processDeposit() {
-        const amount = document.getElementById('dep-amt').value;
-        const endpoint = depMode === 'TON' ? '/api/deposit/ton' : '/api/deposit/stars';
+        const endpoint = mode === 'TON' ? '/api/finance/deposit/ton' : '/api/finance/deposit/stars';
         const r = await fetch(endpoint, {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({id:uid, amount})
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({userId: uid, amount: amt})
         });
         const d = await r.json();
-        if(d.url) tg.openTelegramLink(d.url); else tg.showAlert(d.error);
+        if(d.url) tg.openTelegramLink(d.url);
+        else tg.showAlert(d.error);
     }
 
-    sync();
+    async function executeWithdraw() {
+        const amt = document.getElementById('w-amount').value;
+        const method = document.getElementById('w-method').value;
+        const details = document.getElementById('w-address').value;
+
+        const r = await fetch('/api/finance/withdraw', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({userId: uid, amount: amt, method: method, details: details})
+        });
+        const d = await r.json();
+        tg.showAlert(d.message || d.error);
+        initializeNeuralLink();
+    }
+
+    setInterval(() => {
+        document.getElementById('ton-price').innerText = (5.2 + Math.random() * 0.2).toFixed(3);
+    }, 2000);
+
+    lucide.createIcons();
+    initializeNeuralLink();
 </script>
 </body>
 </html>
