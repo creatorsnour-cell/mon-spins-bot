@@ -3,71 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TON Games - Fintech Edition</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --neon-blue: #00d2ff; --dark-bg: #0a0a0a; }
-        body { background: var(--dark-bg); color: white; font-family: 'Segoe UI', sans-serif; text-align: center; }
-        .card { background: #1a1a1a; border: 1px solid #333; border-radius: 20px; margin: 15px; padding: 20px; }
-        .balance-value { font-size: 32px; color: var(--neon-blue); font-weight: bold; }
-        .btn-play { background: var(--neon-blue); color: black; border: none; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; margin-top: 10px; }
-        
-        /* Animation du dépôt spin-bot */
-        .spinning { animation: rotate 0.5s infinite linear; }
-        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        body { background: #0a0a0b; color: white; font-family: sans-serif; text-align: center; margin: 0; }
+        .card { background: #151517; border-radius: 20px; margin: 10px; padding: 20px; border: 1px solid #222; }
+        .btn { background: #00d2ff; color: black; border: none; padding: 12px; border-radius: 12px; font-weight: bold; width: 100%; margin: 5px 0; cursor: pointer; }
+        .grid-games { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 15px; }
+        .game-btn { background: #1c1c1e; padding: 15px; border-radius: 15px; border: 1px solid #333; cursor: pointer; }
+        .active-game { border-color: #00d2ff; background: #232326; }
+        input { background: #1c1c1e; border: 1px solid #333; color: white; padding: 12px; border-radius: 10px; width: 80%; margin-bottom: 10px; text-align: center; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <p>SOLDE ACTUEL</p>
-        <div class="balance-value"><span id="user-bal">0.00</span> TON</div>
+
+<div class="card">
+    <div style="opacity: 0.6; font-size: 12px;">SOLDE</div>
+    <div id="bal" style="font-size: 32px; font-weight: bold; color: #00d2ff;">0.00 TON</div>
+</div>
+
+<div class="grid-games">
+    <div id="g-dice" class="game-btn active-game" onclick="setG('dice')">🎲<br>Dés</div>
+    <div id="g-casino" class="game-btn" onclick="setG('casino')">🎰<br>Slots</div>
+    <div id="g-mines" class="game-btn" onclick="setG('mines')">💣<br>Mines</div>
+</div>
+
+<div class="card">
+    <div id="display" style="font-size: 50px; margin: 15px;">🎲</div>
+    <div id="mine-opt" style="display:none; margin-bottom: 10px;">
+        Mines: <input type="number" id="mCount" value="3" min="1" max="9" style="width:50px;">
     </div>
+    <input type="number" id="bet" placeholder="Mise">
+    <button class="btn" onclick="play()">JOUER (WIN x3)</button>
+</div>
 
-    <div class="card" id="game-zone">
-        <div id="dice-display" style="font-size: 60px;">🎲</div>
-        <input type="number" id="bet-amount" placeholder="Mise (ex: 0.1)" style="width: 80%; padding: 10px; margin: 10px; border-radius: 8px;">
-        <button class="btn-play" onclick="startSpin()">PLAY NOW</button>
+<div class="card">
+    <button class="btn" style="background:#ffbc00;" onclick="payStars()">⭐ RECHARGE ÉTOILES</button>
+    <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
+        <input type="number" id="wit-amt" placeholder="Montant Retrait (min 1)">
+        <button class="btn" style="background:#ff4444; color:white;" onclick="withdraw()">RETIRER TON</button>
     </div>
+</div>
 
-    <div class="card">
-        <button onclick="deposit('TON', 'CRYPTOBOT')" style="color: white; background: none; border: 1px solid #444; padding: 10px; border-radius: 8px;">RECHARGE VIA CRYPTOBOT</button>
-    </div>
+<script>
+    const tg = window.Telegram.WebApp;
+    const uid = tg.initDataUnsafe.user?.id || 7019851823;
+    let curG = 'dice';
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        const userId = tg.initDataUnsafe.user?.id || 7019851823;
+    function setG(g) {
+        curG = g;
+        document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active-game'));
+        document.getElementById('g-'+g).classList.add('active-game');
+        document.getElementById('display').innerText = (g==='dice')?'🎲':(g==='casino')?'🎰':'💣';
+        document.getElementById('mine-opt').style.display = (g==='mines')?'block':'none';
+    }
 
-        async function startSpin() {
-            const dice = document.getElementById('dice-display');
-            dice.classList.add('spinning'); // Animation issue du bot
-            
-            const bet = document.getElementById('bet-amount').value;
-            const res = await fetch('/api/play', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: userId, bet: parseFloat(bet), game: 'dice' })
-            });
-            const data = await res.json();
+    async function sync() {
+        const r = await fetch('/api/user-data', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
+        const d = await r.json(); document.getElementById('bal').innerText = d.balance.toFixed(2) + " TON";
+    }
 
-            setTimeout(() => {
-                dice.classList.remove('spinning');
-                if(data.error) return tg.showAlert(data.error);
-                dice.innerText = '🎲 ' + data.result;
-                document.getElementById('user-bal').innerText = data.balance.toFixed(2);
-                if(data.win > 0) tg.showScanQrPopup({ text: "GAGNÉ ! +" + data.win + " TON" });
-            }, 1000);
-        }
+    async function play() {
+        const bet = document.getElementById('bet').value;
+        const r = await fetch('/api/play', { method:'POST', headers:{'Content-Type':'application/json'}, 
+            body:JSON.stringify({id:uid, bet, game:curG, minesCount: document.getElementById('mCount').value}) 
+        });
+        const d = await r.json();
+        if(d.error) return tg.showAlert(d.error);
+        document.getElementById('display').innerText = Array.isArray(d.result) ? d.result.join('') : d.result;
+        if(d.win > 0) tg.showAlert("WIN! +"+d.win+" TON");
+        sync();
+    }
 
-        async function deposit(asset, platform) {
-            const amount = prompt("Montant à déposer :");
-            const res = await fetch('/api/deposit', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: userId, amount, asset, platform })
-            });
-            const data = await res.json();
-            if(data.url) tg.openLink(data.url);
-        }
-    </script>
+    async function payStars() {
+        const amt = prompt("Nombre d'étoiles:");
+        const r = await fetch('/api/deposit-stars', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
+        const d = await r.json();
+        if(d.url) tg.openTelegramLink(d.url);
+    }
+
+    async function withdraw() {
+        const amt = document.getElementById('wit-amt').value;
+        const r = await fetch('/api/withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
+        const d = await r.json();
+        tg.showAlert(d.message);
+        sync();
+    }
+
+    sync();
+</script>
 </body>
 </html>
