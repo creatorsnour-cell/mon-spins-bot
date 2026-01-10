@@ -1,22 +1,61 @@
 const express = require('express');
-const axios = require('axios');
+const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
 const app = express();
+
 app.use(express.json());
 app.use(express.static(__dirname));
 
 const CONFIG = {
     BOT_TOKEN: '8554964276:AAFXlTNSQXWQy8RhroiqwjcqaSg7lYzY9GU',
     CRYPTO_TOKEN: '510513:AAeEQr2dTYwFbaX56NPAgZluhSt34zua2fc',
-    XROCKET_TOKEN: '49264a863b86fa1418a0a3969', 
-    ADMIN_ID: '7019851823'
+    ADMIN_ID: '7019851823',
+    // REMPLACEZ PAR VOTRE URL HTTPS (ex: https://ton-domaine.com)
+    WEBHOOK_URL: 'https://votre-site-secu.com' 
 };
+
+// Initialisation du Bot avec Webhook
+const bot = new TelegramBot(CONFIG.BOT_TOKEN);
+bot.setWebHook(`${CONFIG.WEBHOOK_URL}/api/telegram`);
 
 const DB_FILE = './database.json';
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
 const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-// --- GESTION DES JEUX (LOGIQUE x3) ---
+// --- GESTION DU WEBHOOK TELEGRAM ---
+app.post('/api/telegram', (req, res) => {
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
+});
+
+// Validation obligatoire avant le paiement final
+bot.on('pre_checkout_query', (query) => {
+    bot.answerPreCheckoutQuery(query.id, true);
+});
+
+// Écoute de l'événement de paiement réussi (XTR Stars)
+bot.on('successful_payment', (msg) => {
+    const userId = msg.from.id;
+    const starsAmount = msg.successful_payment.total_amount;
+    
+    // Taux de conversion : 1 Star = 0.01 TON (modifiable)
+    const tonToCredit = starsAmount * 0.01;
+
+    if (!db[userId]) db[userId] = { balance: 0.0 };
+    db[userId].balance += tonToCredit;
+    saveDB();
+
+    bot.sendMessage(userId, `✅ Dépôt réussi ! +${tonToCredit.toFixed(2)} TON ajoutés via ${starsAmount} ⭐`);
+});
+
+// --- ROUTES API POUR LE FRONTEND ---
+
+app.post('/api/user-data', (req, res) => {
+    const { id } = req.body;
+    if (!db[id]) { db[id] = { balance: 0.0 }; saveDB(); }
+    res.json(db[id]);
+});
+
 app.post('/api/play', (req, res) => {
     const { id, bet, game, minesCount } = req.body;
     const user = db[id];
@@ -26,11 +65,9 @@ app.post('/api/play', (req, res) => {
     let win = 0;
     let result;
 
-    const chance = Math.floor(Math.random() * 6) + 1;
-
     if (game === 'dice') {
-        result = chance;
-        if (result >= 4) win = bet * 3; // 4,5,6 = Gagné x3
+        result = Math.floor(Math.random() * 6) + 1;
+        if (result >= 4) win = bet * 3;
     } else if (game === 'casino') {
         const symbols = ['🍒', '🍋', '💎', '7️⃣'];
         result = [symbols[Math.floor(Math.random()*4)], symbols[Math.floor(Math.random()*4)], symbols[Math.floor(Math.random()*4)]];
@@ -46,48 +83,23 @@ app.post('/api/play', (req, res) => {
     res.json({ result, win, balance: user.balance });
 });
 
-// --- PAIEMENT PAR ÉTOILES (STARS) ---
 app.post('/api/deposit-stars', async (req, res) => {
     const { id, amount } = req.body;
     try {
-        const r = await axios.post(`https://api.telegram.org/bot${CONFIG.BOT_TOKEN}/createInvoiceLink`, {
-            title: "Recharge Stars",
-            description: `Achat de ${amount} étoiles`,
-            payload: id.toString(),
-            currency: "XTR",
-            prices: [{ label: "Stars", amount: parseInt(amount) }]
-        });
-        res.json({ success: true, url: r.data.result });
-    } catch (e) { res.json({ success: false }); }
+        const link = await bot.createInvoiceLink(
+            "Recharge Stars",
+            `Achat de ${amount} étoiles pour STARRUSSI`,
+            `PAY_USER_${id}_${Date.now()}`,
+            "", // Provider token vide pour XTR
+            "XTR",
+            [{ label: "Stars", amount: parseInt(amount) }]
+        );
+        res.json({ success: true, url: link });
+    } catch (e) {
+        res.json({ success: false, error: e.message });
+    }
 });
 
-// --- RETRAIT (MINIMUM 1 TON) ---
-app.post('/api/withdraw', async (req, res) => {
-    const { id, amount } = req.body;
-    const user = db[id];
-    if (!user || user.balance < amount) return res.json({ success: false, message: "Solde insuffisant" });
-    if (amount < 1) return res.json({ success: false, message: "Minimum 1 TON" });
-
-    try {
-        const r = await axios.post('https://pay.crypt.bot/api/transfer', {
-            user_id: parseInt(id),
-            asset: "TON",
-            amount: amount.toString(),
-            spend_id: `W-${Date.now()}`
-        }, { headers: { 'Crypto-Pay-API-Token': CONFIG.CRYPTO_TOKEN } });
-
-        if (r.data.ok) {
-            user.balance -= parseFloat(amount);
-            saveDB();
-            res.json({ success: true, message: "Retrait réussi !" });
-        }
-    } catch (e) { res.json({ success: false, message: "Erreur API Retrait" }); }
+app.listen(3000, () => {
+    console.log("Serveur TITAN V15 démarré sur le port 3000");
 });
-
-app.post('/api/user-data', (req, res) => {
-    const { id } = req.body;
-    if (!db[id]) { db[id] = { balance: 0.0 }; saveDB(); }
-    res.json(db[id]);
-});
-
-app.listen(3000);
