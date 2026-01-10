@@ -1,12 +1,15 @@
 {
   "name": "newspin-casino-pro",
-  "version": "2.5.0",
-  "description": "Casino Futuriste avec Retraits et Dépôts",
+  "version": "3.0.0",
+  "description": "Casino Titan V15 - Webhook & XTR Stars Integration",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "express": "^4.18.2",
     "axios": "^1.6.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "node-telegram-bot-api": "^0.64.0"
   }
 }
