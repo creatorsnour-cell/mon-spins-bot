@@ -12,13 +12,15 @@
         .game-btn { background: #1c1c1e; padding: 15px; border-radius: 15px; border: 1px solid #333; cursor: pointer; }
         .active-game { border-color: #00d2ff; background: #232326; }
         input { background: #1c1c1e; border: 1px solid #333; color: white; padding: 12px; border-radius: 10px; width: 80%; margin-bottom: 10px; text-align: center; }
+        #status-msg { font-size: 12px; color: #00ffa3; margin-top: 5px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div style="opacity: 0.6; font-size: 12px;">SOLDE</div>
+    <div style="opacity: 0.6; font-size: 12px;">SOLDE ACTUEL</div>
     <div id="bal" style="font-size: 32px; font-weight: bold; color: #00d2ff;">0.00 TON</div>
+    <div id="status-msg">Synchronisation...</div>
 </div>
 
 <div class="grid-games">
@@ -38,14 +40,11 @@
 
 <div class="card">
     <button class="btn" style="background:#ffbc00;" onclick="payStars()">⭐ RECHARGE ÉTOILES</button>
-    <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
-        <input type="number" id="wit-amt" placeholder="Montant Retrait (min 1)">
-        <button class="btn" style="background:#ff4444; color:white;" onclick="withdraw()">RETIRER TON</button>
-    </div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
+    tg.expand();
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
     let curG = 'dice';
 
@@ -58,38 +57,53 @@
     }
 
     async function sync() {
-        const r = await fetch('/api/user-data', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
-        const d = await r.json(); document.getElementById('bal').innerText = d.balance.toFixed(2) + " TON";
+        try {
+            const r = await fetch('/api/user-data', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
+            const d = await r.json(); 
+            document.getElementById('bal').innerText = d.balance.toFixed(2) + " TON";
+        } catch (e) { console.error("Sync error"); }
     }
 
     async function play() {
         const bet = document.getElementById('bet').value;
+        if(!bet || bet <= 0) return tg.showAlert("Entrez une mise");
+        
         const r = await fetch('/api/play', { method:'POST', headers:{'Content-Type':'application/json'}, 
             body:JSON.stringify({id:uid, bet, game:curG, minesCount: document.getElementById('mCount').value}) 
         });
         const d = await r.json();
         if(d.error) return tg.showAlert(d.error);
+        
         document.getElementById('display').innerText = Array.isArray(d.result) ? d.result.join('') : d.result;
-        if(d.win > 0) tg.showAlert("WIN! +"+d.win+" TON");
+        if(d.win > 0) tg.showAlert("GAGNÉ ! +"+d.win+" TON");
         sync();
     }
 
     async function payStars() {
-        const amt = prompt("Nombre d'étoiles:");
-        const r = await fetch('/api/deposit-stars', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
-        const d = await r.json();
-        if(d.url) tg.openTelegramLink(d.url);
-    }
+        const amt = prompt("Quantité d'étoiles (ex: 50):");
+        if(!amt) return;
 
-    async function withdraw() {
-        const amt = document.getElementById('wit-amt').value;
-        const r = await fetch('/api/withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
+        const r = await fetch('/api/deposit-stars', { 
+            method:'POST', 
+            headers:{'Content-Type':'application/json'}, 
+            body:JSON.stringify({id:uid, amount:amt}) 
+        });
         const d = await r.json();
-        tg.showAlert(d.message);
-        sync();
+        
+        if(d.url) {
+            tg.openTelegramLink(d.url);
+            document.getElementById('status-msg').style.display = 'block';
+            document.getElementById('status-msg').innerText = "Vérification du paiement...";
+            // Auto-refresh du solde après quelques secondes
+            setTimeout(sync, 10000);
+        } else {
+            tg.showAlert("Erreur API : " + d.error);
+        }
     }
 
     sync();
+    // Refresh automatique toutes les 20 sec pour voir les dépôts
+    setInterval(sync, 20000);
 </script>
 </body>
 </html>
