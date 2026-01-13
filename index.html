@@ -5,80 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --neon: #00d2ff; --gold: #ffbc00; }
-        body { background: #050505; color: white; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; padding-bottom: 80px; }
-        .card { background: #111; border-radius: 20px; margin: 12px; padding: 15px; border: 1px solid #222; }
-        .balance { font-size: 32px; font-weight: bold; color: var(--neon); }
-        .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; margin-top: 8px; transition: 0.2s; }
-        .btn-play { background: var(--neon); color: black; }
-        .nav { position: fixed; bottom: 0; width: 100%; background: #111; display: flex; border-top: 1px solid #222; z-index: 100; }
-        .nav-item { flex: 1; padding: 15px; font-size: 12px; cursor: pointer; opacity: 0.6; }
-        .nav-item.active { opacity: 1; color: var(--neon); border-top: 2px solid var(--neon); }
+        :root { --neon: #00d2ff; --bg: #050505; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; margin: 0; padding-bottom: 70px; }
+        .card { background: #111; border-radius: 20px; margin: 12px; padding: 20px; border: 1px solid #222; }
+        .balance { font-size: 36px; font-weight: bold; color: var(--neon); text-shadow: 0 0 15px rgba(0,210,255,0.3); }
+        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .btn-play { background: linear-gradient(90deg, #00d2ff, #0072ff); color: white; }
+        .nav { position: fixed; bottom: 0; width: 100%; background: #111; display: flex; border-top: 1px solid #333; }
+        .nav-item { flex: 1; padding: 15px; font-size: 12px; opacity: 0.5; cursor: pointer; }
+        .active { opacity: 1; color: var(--neon); }
         .hidden { display: none; }
-        input { width: 85%; padding: 12px; background: #222; border: 1px solid #333; color: white; border-radius: 10px; text-align: center; margin: 5px; }
+        input { width: 85%; padding: 12px; background: #1a1a1a; border: 1px solid #333; color: white; border-radius: 10px; text-align: center; margin-bottom: 10px; }
+        #display { font-size: 60px; height: 100px; display: flex; align-items: center; justify-content: center; }
+        .spinning { animation: rotate 0.1s infinite linear; }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div id="page-home">
+<div id="game-page">
     <div class="card">
-        <div style="opacity: 0.5; font-size: 11px;">AVAILABLE BALANCE</div>
+        <div style="opacity: 0.5; font-size: 11px; letter-spacing: 1px;">TOTAL BALANCE</div>
         <div id="bal" class="balance">0.00 TON</div>
     </div>
 
     <div class="card">
-        <div id="display" style="font-size: 60px; height: 90px; display: flex; align-items: center; justify-content: center;">🎲</div>
-        <select id="game-select" class="btn" style="background:#222; color:white; border: 1px solid #333; width: 90%;" onchange="updateIcon()">
-            <option value="dice">🎲 Dice (Hard)</option>
-            <option value="slots">🎰 Slots (Super Win)</option>
-            <option value="crash">🚀 Crash (Risk)</option>
+        <div id="display">🎲</div>
+        <select id="game-type" class="btn" style="background:#222; color:white; border:1px solid #444;">
+            <option value="dice">🎲 Dice (x4 Multiplier)</option>
+            <option value="slots">🎰 Slots (x15 Multiplier)</option>
         </select>
         <input type="number" id="bet" placeholder="Bet Amount (TON)">
-        <button class="btn btn-play" onclick="play()">START GAME</button>
+        <button class="btn btn-play" onclick="play()">SPIN & WIN</button>
     </div>
 </div>
 
-<div id="page-wallet" class="hidden">
+<div id="wallet-page" class="hidden">
     <div class="card">
-        <h3>Wallet Management</h3>
-        <p style="font-size:12px; color:#aaa;">Min. Stars Deposit: 5 ⭐️<br>Min. TON Withdrawal: 1 TON</p>
-        <button class="btn" style="background:var(--gold);" onclick="payStars()">⭐ RECHARGE STARS</button>
-        <button class="btn" style="background:#222; color:white; border:1px solid #444;" onclick="payCrypto()">💎 DÉPÔT CRYPTOBOT</button>
-        <hr style="border:0.5px solid #333; margin:20px 0;">
-        <input type="number" id="wit-amt" placeholder="Amount to withdraw">
-        <button class="btn" style="background:#ff4444; color:white;" onclick="withdraw()">WITHDRAW TON</button>
+        <h3>Wallet</h3>
+        <button class="btn" style="background:#ffbc00;" onclick="payStars()">⭐ RECHARGE STARS (Min. 5)</button>
+        <button class="btn" style="background:#222; color:white; border:1px solid #444;" onclick="payCrypto()">💎 CRYPTOBOT (TON)</button>
+        <hr style="border:0.1px solid #333; margin:20px 0;">
+        <input type="number" id="wit-amt" placeholder="Withdraw Amount (TON)">
+        <button class="btn" style="background:#ff4444;" onclick="withdraw()">WITHDRAW (Min. 1 TON)</button>
     </div>
 </div>
 
-<div id="page-ref" class="hidden">
+<div id="ref-page" class="hidden">
     <div class="card">
-        <h3>Invite & Earn</h3>
-        <div style="font-size: 40px;">👥</div>
-        <p>Invite friends and get <b style="color:var(--neon);">30%</b> of their winnings!</p>
-        <div class="card" style="background:#000;">
-            <div id="ref-count" style="font-size:24px; color:var(--neon);">0</div>
+        <h3>Referral Program</h3>
+        <div style="font-size:40px;">👥</div>
+        <p>Invite friends and earn <span style="color:var(--neon);">30%</span> of their wins!</p>
+        <div class="card" style="background:#000; border-color:var(--neon);">
+            <div id="ref-count" style="font-size:24px;">0</div>
             <div style="font-size:10px;">FRIENDS INVITED</div>
         </div>
-        <p style="font-size:11px;">Invite 500 people to get <b>500 Stars</b> bonus!</p>
-        <button class="btn btn-play" onclick="copyLink()">COPY MY INVITE LINK</button>
+        <button class="btn btn-play" onclick="copyRef()">COPY INVITE LINK</button>
+        <p style="font-size:10px; margin-top:15px; color:#666;">Invite 500 users to get 500 Stars Bonus!</p>
     </div>
 </div>
 
 <nav class="nav">
-    <div class="nav-item active" onclick="showPage('home', this)">🎮 Games</div>
-    <div class="nav-item" onclick="showPage('wallet', this)">💰 Wallet</div>
-    <div class="nav-item" onclick="showPage('ref', this)">👥 Referral</div>
+    <div class="nav-item active" onclick="tab('game', this)">Games</div>
+    <div class="nav-item" onclick="tab('wallet', this)">Wallet</div>
+    <div class="nav-item" onclick="tab('ref', this)">Referral</div>
 </nav>
 
 <script>
     const tg = window.Telegram.WebApp;
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
-    
-    function showPage(p, el) {
+
+    function tab(name, el) {
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         el.classList.add('active');
-        ['home', 'wallet', 'ref'].forEach(pg => document.getElementById('page-'+pg).classList.add('hidden'));
-        document.getElementById('page-'+p).classList.remove('hidden');
+        ['game', 'wallet', 'ref'].forEach(p => document.getElementById(p+'-page').classList.add('hidden'));
+        document.getElementById(name+'-page').classList.remove('hidden');
     }
 
     async function sync() {
@@ -90,39 +91,42 @@
 
     async function play() {
         const bet = document.getElementById('bet').value;
-        if(!bet || bet < 0.01) return tg.showAlert("Minimum bet 0.01 TON");
-        const game = document.getElementById('game-select').value;
+        const game = document.getElementById('game-type').value;
         const disp = document.getElementById('display');
-        disp.innerText = "⏳";
-        
+        if(!bet || bet <= 0) return tg.showAlert("Please enter a bet");
+
+        disp.classList.add('spinning');
         const r = await fetch('/api/play', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, bet, game}) });
         const d = await r.json();
-        
+
         setTimeout(() => {
+            disp.classList.remove('spinning');
             if(d.error) return tg.showAlert(d.error);
             disp.innerText = Array.isArray(d.result) ? d.result.join('') : d.result;
             if(d.win > 0) {
                 tg.HapticFeedback.notificationOccurred('success');
-                tg.showAlert("Winner! +"+d.win+" TON");
+                tg.showAlert("BIG WIN! +"+d.win+" TON");
+            } else {
+                tg.HapticFeedback.notificationOccurred('error');
             }
             sync();
-        }, 800);
+        }, 600);
     }
 
-    function copyLink() {
-        const link = `https://t.me/VOTRE_BOT_USERNAME?start=${uid}`;
-        const temp = document.createElement('input');
-        document.body.appendChild(temp);
-        temp.value = link;
-        temp.select();
+    function copyRef() {
+        const link = `https://t.me/Newspin_onebot?start=${uid}`;
+        const input = document.createElement('input');
+        document.body.appendChild(input);
+        input.value = link;
+        input.select();
         document.execCommand('copy');
-        document.body.removeChild(temp);
-        tg.showAlert("Invite link copied to clipboard!");
+        document.body.removeChild(input);
+        tg.showAlert("Invite link copied!");
     }
 
     async function payStars() {
-        const amt = prompt("How many Stars? (Min 5):");
-        if(amt < 5) return tg.showAlert("Minimum 5 Stars");
+        const amt = prompt("How many Stars? (Min. 5)");
+        if(amt < 5) return tg.showAlert("Minimum is 5 Stars");
         const r = await fetch('/api/deposit-stars', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
         const d = await r.json();
         if(d.url) tg.openTelegramLink(d.url);
@@ -132,14 +136,8 @@
         const amt = document.getElementById('wit-amt').value;
         const r = await fetch('/api/withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
         const d = await r.json();
-        if(d.error) return tg.showAlert(d.error);
-        tg.showAlert("Withdrawal successful!");
+        tg.showAlert(d.success ? "Success!" : d.error);
         sync();
-    }
-
-    function updateIcon() {
-        const g = document.getElementById('game-select').value;
-        document.getElementById('display').innerText = g === 'dice' ? '🎲' : g === 'slots' ? '🎰' : '🚀';
     }
 
     sync();
