@@ -1,6 +1,7 @@
 {
-  "name": "newspin-casino-pro",
-  "version": "3.5.0",
+  "name": "newspin-casino-titan-v16",
+  "version": "4.0.0",
+  "description": "Casino Pro - Zero Bug Edition",
   "main": "server.js",
   "dependencies": {
     "express": "^4.18.2",
@@ -9,4 +10,3 @@
     "node-telegram-bot-api": "^0.64.0"
   }
 }
-
