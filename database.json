@@ -1,0 +1,10 @@
+{
+  "USER_ID": {
+    "balance": 0.00,
+    "hasDeposited": false,
+    "referrer": 12345678,
+    "invites": 0,
+    "tasks": { "joined_channel": false },
+    "history": [] 
+  }
+}
