@@ -2,180 +2,320 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>NewSpin Casino</title>
     <style>
-        :root { --main: #00d2ff; --gold: #ffbc00; }
-        body { background: #050505; color: white; font-family: 'Inter', sans-serif; text-align: center; margin: 0; padding-bottom: 70px; overflow-x: hidden; }
-        .card { background: #111; border-radius: 20px; margin: 12px; padding: 20px; border: 1px solid #222; }
-        .balance { font-size: 38px; font-weight: 800; color: var(--main); text-shadow: 0 0 15px rgba(0,210,255,0.3); }
-        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
-        .btn-main { background: var(--main); color: black; }
-        .nav { position: fixed; bottom: 0; width: 100%; background: #111; display: flex; border-top: 1px solid #333; z-index: 100; }
-        .nav-item { flex: 1; padding: 15px; font-size: 11px; opacity: 0.5; color: white; }
-        .nav-item.active { opacity: 1; color: var(--main); border-top: 2px solid var(--main); }
-        .hidden { display: none; }
-        input { width: 85%; padding: 12px; background: #1a1a1a; border: 1px solid #333; color: white; border-radius: 10px; text-align: center; }
-        .lead-row { display: flex; justify-content: space-between; padding: 10px; background: #1a1a1a; margin-top: 5px; border-radius: 10px; font-size: 13px; }
-        #display { font-size: 60px; height: 100px; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-        .spinning { animation: spin 0.1s infinite linear; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;800&display=swap');
+        
+        :root { --neon: #00f2ff; --bg: #0a0a0a; --card: #141414; --gold: #ffd700; --red: #ff3b3b; }
+        
+        body { 
+            background: var(--bg); color: white; font-family: 'Poppins', sans-serif; 
+            margin: 0; padding-bottom: 80px; text-align: center; overflow-x: hidden; user-select: none;
+        }
+
+        /* --- UI ELEMENTS --- */
+        .card { background: var(--card); border-radius: 16px; margin: 15px; padding: 20px; border: 1px solid #222; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .balance-card { background: linear-gradient(45deg, #111, #222); border-bottom: 2px solid var(--neon); }
+        .balance { font-size: 32px; font-weight: 800; color: var(--neon); text-shadow: 0 0 10px rgba(0,242,255,0.3); }
+        
+        .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; margin-top: 8px; }
+        .btn-neon { background: var(--neon); color: black; box-shadow: 0 0 10px var(--neon); }
+        .btn-gold { background: var(--gold); color: black; }
+        .btn-red { background: var(--red); color: white; }
+        .btn:active { transform: scale(0.96); }
+
+        /* --- TABS --- */
+        .tab-nav { position: fixed; bottom: 0; width: 100%; background: #111; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #333; z-index: 100; }
+        .tab-btn { background: none; border: none; color: #666; font-size: 24px; cursor: pointer; }
+        .tab-btn.active { color: var(--neon); transform: scale(1.2); }
+        .section { display: none; animation: fadeIn 0.3s; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* --- STRICT RULES MODAL --- */
+        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-content { background: #1a1a1a; padding: 25px; border-radius: 20px; max-width: 85%; text-align: left; border: 1px solid var(--neon); }
+        .modal-title { color: var(--neon); font-size: 20px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .modal-text { font-size: 12px; color: #ccc; line-height: 1.5; margin-bottom: 20px; }
+
+        /* --- GAME ANIMATIONS --- */
+        .game-display { font-size: 60px; height: 100px; display: flex; justify-content: center; align-items: center; background: #000; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
+        .slot-row { display: flex; gap: 10px; }
+        .spin-anim { animation: spin 0.2s infinite linear; }
+        @keyframes spin { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
+
+        /* --- LEADERBOARD & TASKS --- */
+        .list-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #333; font-size: 14px; }
+        .rank-1 { color: var(--gold); }
+
     </style>
 </head>
 <body>
 
-<div id="p-game">
-    <div class="card">
-        <div style="opacity:0.5; font-size:11px;">AVAILABLE BALANCE</div>
-        <div id="bal" class="balance">0.00 TON</div>
-    </div>
-    <div class="card">
-        <div id="display">🎲</div>
-        <select id="g-type" class="btn" style="background:#222; color:white; border:1px solid #444;" onchange="updateIcon()">
-            <option value="dice">🎲 Lucky Dice (x4)</option>
-            <option value="slots">🎰 Super Slots (x10)</option>
-        </select>
-        <input type="number" id="bet" placeholder="Amount (TON)" style="margin-top:15px;">
-        <button class="btn btn-main" onclick="play()">START SPIN</button>
-    </div>
-</div>
-
-<div id="p-task" class="hidden">
-    <div class="card">
-        <h3>Daily Tasks</h3>
-        <div style="background:#1a1a1a; padding:15px; border-radius:15px; display:flex; justify-content:space-between; align-items:center;">
-            <div style="text-align:left;">
-                <div style="font-weight:bold;">Join @starrussi</div>
-                <div style="color:var(--main); font-size:12px;">+0.02 TON Reward</div>
-            </div>
-            <button class="btn" style="width:70px; margin:0; background:white; color:black; padding:8px;" onclick="checkTask()">DONE</button>
+<div id="modal-overlay">
+    <div class="modal-content">
+        <h3 class="modal-title">⚖️ STRICT RULES</h3>
+        <div class="modal-text">
+            <b>1. Access Conditions:</b> Use of this app is reserved for adults. Gambling involves risks.<br><br>
+            <b>2. Fraud Policy:</b> Use of bots, scripts, or bug exploitation will result in an immediate ban and seizure of funds.<br><br>
+            <b>3. Transactions:</b> Deposits are instant. Withdrawals over 20 TON are subject to manual check (12h-24h).<br><br>
+            <b>4. Self-Exclusion:</b> You are responsible for your gaming limits.
         </div>
-        <button class="btn" style="background:#222; color:white; border:1px solid #444;" onclick="tg.openTelegramLink('https://t.me/starrussi')">OPEN CHANNEL</button>
+        <button class="btn btn-neon" onclick="acceptRules()">I HAVE READ AND ACCEPT</button>
     </div>
 </div>
 
-<div id="p-ref" class="hidden">
+<div class="card balance-card">
+    <div style="opacity: 0.7; font-size: 12px;">AVAILABLE BALANCE</div>
+    <div id="bal" class="balance">0.00 TON</div>
+</div>
+
+<div id="tab-games" class="section active">
+    
     <div class="card">
-        <h3>Referral Program</h3>
-        <p>Invite friends and earn <span style="color:var(--main);">30%</span> of their winnings!</p>
-        <div id="ref-status" style="font-size:13px; margin-bottom:15px; color:#aaa;">Invited: 0 users</div>
-        <button class="btn btn-main" onclick="copyRef()">COPY MY INVITE LINK</button>
+        <h3>🎲 SUPER DICE</h3>
+        <div class="game-display" id="dice-disp">🎲</div>
+        <input type="number" id="bet-dice" placeholder="Bet Amount (TON)" value="0.1" style="width: 50%; padding: 10px; text-align: center; border-radius: 8px; border:none; margin-bottom:10px;">
+        <button class="btn btn-neon" onclick="play('dice')">ROLL (x3)</button>
     </div>
+
     <div class="card">
-        <h4 style="margin:0 0 10px 0;">🏆 Top Referrers</h4>
+        <h3>🎰 HARDCORE SLOTS</h3>
+        <div class="game-display">
+            <div id="slot1">🍒</div>
+            <div id="slot2">🍒</div>
+            <div id="slot3">🍒</div>
+        </div>
+        <input type="number" id="bet-slots" placeholder="Bet Amount" value="0.2" style="width: 50%; padding: 10px; text-align: center; border-radius: 8px; border:none; margin-bottom:10px;">
+        <button class="btn btn-gold" onclick="play('slots')">SPIN (x5)</button>
+    </div>
+
+</div>
+
+<div id="tab-tasks" class="section">
+    <div class="card">
+        <h3>📝 TASKS</h3>
+        <p style="font-size: 13px; color: #888;">Complete tasks to earn free TON.</p>
+        
+        <div class="list-item" style="align-items: center;">
+            <div style="text-align: left;">
+                <div>Join <b>@starrussi</b></div>
+                <div style="color: var(--neon);">+0.02 TON</div>
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <button class="btn" style="padding: 8px; width: auto; background: #333; color: white;" onclick="window.Telegram.WebApp.openTelegramLink('https://t.me/starrussi')">Join</button>
+                <button class="btn" id="btn-check-task" style="padding: 8px; width: auto; background: var(--neon); color: black;" onclick="checkTask()">Check</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="tab-ref" class="section">
+    <div class="card">
+        <h3>🤝 REFERRAL PROGRAM</h3>
+        <p style="font-size: 12px;">Invite friends & earn <b>30%</b> of their winnings!</p>
+        <div style="background: #222; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 12px; word-break: break-all;" id="ref-link">...</div>
+        <button class="btn btn-neon" onclick="copyRef()">COPY LINK</button>
+        <br><br>
+        <p>🎯 Milestone: Invite 500 users = <b>500 Stars + 1 NFT</b></p>
+    </div>
+
+    <div class="card">
+        <h4>🏆 TOP 5 LEADERS</h4>
         <div id="leaderboard">Loading...</div>
     </div>
 </div>
 
-<div id="p-wallet" class="hidden">
+<div id="tab-wallet" class="section">
     <div class="card">
-        <h3>Wallet</h3>
-        <button class="btn" style="background:var(--gold); color:black;" onclick="payStars()">⭐ DEPOSIT STARS (Min. 5)</button>
-        <button class="btn" style="background:#222; color:white; border:1px solid #444;" onclick="payCrypto()">💎 DEPOSIT TON (CryptoBot)</button>
-        <hr style="border:0.5px solid #333; margin:20px 0;">
-        <input type="number" id="wit-amt" placeholder="Withdraw TON">
-        <button class="btn" style="background:#ff4444; color:white;" onclick="withdraw()">WITHDRAW (Min. 1 TON)</button>
-        <p style="font-size:10px; color:#666; margin-top:10px;">* Withdrawal requires at least 1 deposit.</p>
+        <h3>💳 WALLET</h3>
+        <p style="font-size: 12px; color: #aaa;">Min Dep: 5 Stars | Min W/D: 0.5 TON</p>
+        
+        <button class="btn" style="background:#ffbc00;" onclick="payStars()">⭐ DEPOSIT STARS</button>
+        <button class="btn btn-neon" style="color:black; margin-top:10px;" onclick="genInvoice()">🔗 SHARE INVOICE LINK</button>
+        <br><br>
+        <input type="number" id="wd-amount" placeholder="Amount TON" style="width: 80%; padding: 10px; border-radius: 8px;">
+        <button class="btn btn-red" onclick="withdraw()">WITHDRAW TON</button>
+        <p style="font-size:10px; color:#666; margin-top:5px;">*First deposit required to withdraw</p>
     </div>
 </div>
 
-<nav class="nav">
-    <div class="nav-item active" onclick="tab('game', this)">Games</div>
-    <div class="nav-item" onclick="tab('task', this)">Tasks</div>
-    <div class="nav-item" onclick="tab('ref', this)">Referral</div>
-    <div class="nav-item" onclick="tab('wallet', this)">Wallet</div>
-</nav>
+<div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('games', this)">🎮</button>
+    <button class="tab-btn" onclick="switchTab('tasks', this)">📝</button>
+    <button class="tab-btn" onclick="switchTab('ref', this)">👥</button>
+    <button class="tab-btn" onclick="switchTab('wallet', this)">💳</button>
+</div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    const uid = tg.initDataUnsafe.user?.id || 7019851823;
-    let botName = "Newspin_onebot";
+    tg.expand();
+    tg.enableClosingConfirmation();
+    
+    // Fallback ID for testing in browser, actual usage takes from Telegram
+    const uid = tg.initDataUnsafe.user?.id || 12345; 
+    const username = tg.initDataUnsafe.user?.username || 'User';
 
-    function tab(name, el) {
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        el.classList.add('active');
-        ['game', 'task', 'ref', 'wallet'].forEach(p => document.getElementById('p-'+p).classList.add('hidden'));
-        document.getElementById('p-'+name).classList.remove('hidden');
-        if(name === 'ref') refreshLeaderboard();
+    // UI Logic
+    function switchTab(tabId, btn) {
+        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
     }
 
-    async function sync() {
+    // --- API CALLS ---
+
+    async function init() {
+        // Load User Data
         const r = await fetch('/api/user-data', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
-        const d = await r.json();
-        document.getElementById('bal').innerText = d.balance.toFixed(2) + " TON";
-        document.getElementById('ref-status').innerText = `Invited: ${d.referrals || 0} users`;
-        botName = d.botUser;
+        const user = await r.json();
+        
+        // Update Balance
+        document.getElementById('bal').innerText = user.balance.toFixed(2) + " TON";
+        
+        // Modal Logic
+        if(user.acceptedRules) {
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
+        // Set Ref Link
+        document.getElementById('ref-link').innerText = `https://t.me/Newspin_onebot?start=${uid}`;
+
+        // Load Leaderboard
+        loadLeaderboard();
     }
 
-    async function play() {
-        const bet = document.getElementById('bet').value;
-        const game = document.getElementById('g-type').value;
-        const disp = document.getElementById('display');
-        if(!bet || bet <= 0) return tg.showAlert("Enter a bet amount!");
+    async function acceptRules() {
+        await fetch('/api/accept-rules', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
+        document.getElementById('modal-overlay').style.display = 'none';
+    }
 
-        disp.classList.add('spinning');
+    async function play(game) {
+        let betInputId = game === 'dice' ? 'bet-dice' : 'bet-slots';
+        const bet = document.getElementById(betInputId).value;
+        
+        if(bet <= 0) return tg.showAlert("Invalid Bet");
+
+        // UI Animation Start
+        if(game === 'dice') document.getElementById('dice-disp').innerText = "⏳";
+        if(game === 'slots') {
+            document.getElementById('slot1').innerText = "🌪️";
+            document.getElementById('slot2').innerText = "🌪️";
+            document.getElementById('slot3').innerText = "🌪️";
+        }
+
         const r = await fetch('/api/play', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, bet, game}) });
         const d = await r.json();
 
+        // Delay for realism
         setTimeout(() => {
-            disp.classList.remove('spinning');
             if(d.error) return tg.showAlert(d.error);
-            disp.innerText = Array.isArray(d.result) ? d.result.join('') : d.result;
-            if(d.win > 0) {
-                tg.showAlert(`BIG WIN! +${d.win} TON`);
-                tg.HapticFeedback.notificationOccurred('success');
+            
+            // Update UI
+            if(game === 'dice') {
+                document.getElementById('dice-disp').innerText = d.gameData.roll >= 0 ? d.gameData.roll : "❌";
             }
-            sync();
-        }, 600);
+            if(game === 'slots') {
+                document.getElementById('slot1').innerText = d.gameData.slots[0];
+                document.getElementById('slot2').innerText = d.gameData.slots[1];
+                document.getElementById('slot3').innerText = d.gameData.slots[2];
+            }
+
+            document.getElementById('bal').innerText = d.balance.toFixed(2) + " TON";
+            
+            if(d.win) {
+                tg.HapticFeedback.notificationOccurred('success');
+                tg.showAlert(`🎉 YOU WON ${d.amount.toFixed(2)} TON!`);
+            } else {
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+        }, 800);
     }
 
     async function checkTask() {
-        const r = await fetch('/api/check-task', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
+        const btn = document.getElementById('btn-check-task');
+        btn.innerText = "Checking...";
+        const r = await fetch('/api/verify-task', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
         const d = await r.json();
-        tg.showAlert(d.message);
-        sync();
-    }
-
-    async function refreshLeaderboard() {
-        const r = await fetch('/api/leaderboard');
-        const d = await r.json();
-        document.getElementById('leaderboard').innerHTML = d.map((u, i) => `
-            <div class="lead-row">
-                <span>${i+1}. User ID: ${u.id.toString().slice(0,4)}...</span>
-                <span style="color:var(--main)">${u.refs} refs</span>
-            </div>
-        `).join('');
-    }
-
-    function copyRef() {
-        const link = `https://t.me/${botName}?start=${uid}`;
-        const el = document.createElement('textarea');
-        el.value = link; document.body.appendChild(el); el.select();
-        document.execCommand('copy'); document.body.removeChild(el);
-        tg.showAlert("Invite link copied!");
+        
+        if(d.success && d.rewarded) {
+            btn.innerText = "DONE ✅";
+            btn.disabled = true;
+            document.getElementById('bal').innerText = d.newBalance.toFixed(2) + " TON";
+            tg.showAlert("Task Completed! +0.02 TON");
+        } else if (d.alreadyDone) {
+            btn.innerText = "DONE ✅";
+        } else {
+            btn.innerText = "Check";
+            tg.showAlert(d.error);
+        }
     }
 
     async function payStars() {
-        const amt = prompt("Amount of Stars (Min. 5):");
+        const amt = prompt("Enter amount of Stars (Min 5):");
+        if(!amt) return;
         const r = await fetch('/api/deposit-stars', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
         const d = await r.json();
-        if(d.url) tg.openTelegramLink(d.url); else tg.showAlert(d.error || "Error");
+        if(d.url) tg.openTelegramLink(d.url);
+        else tg.showAlert(d.error);
+    }
+
+    async function genInvoice() {
+        const amt = prompt("Generate Invoice Link for how many Stars?");
+        if(!amt) return;
+        const r = await fetch('/api/deposit-stars', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
+        const d = await r.json();
+        if(d.url) {
+             // Copy logic
+             navigator.clipboard.writeText(d.url);
+             tg.showAlert("Invoice Link Copied! Send it to anyone.");
+        } else {
+            tg.showAlert(d.error);
+        }
     }
 
     async function withdraw() {
-        const amt = document.getElementById('wit-amt').value;
+        const amt = document.getElementById('wd-amount').value;
+        if(!amt) return;
         const r = await fetch('/api/withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
         const d = await r.json();
-        tg.showAlert(d.success ? "Withdrawal processed!" : d.error);
-        sync();
+        if(d.success) {
+            tg.showAlert("✅ Withdrawal processed!");
+            init(); // refresh balance
+        } else {
+            tg.showAlert("❌ " + d.error);
+        }
     }
 
-    function updateIcon() {
-        const type = document.getElementById('g-type').value;
-        document.getElementById('display').innerText = type === 'dice' ? '🎲' : '🎰';
+    function copyRef() {
+        const link = document.getElementById('ref-link').innerText;
+        navigator.clipboard.writeText(link);
+        tg.showAlert("Referral link copied!");
     }
 
-    sync();
+    async function loadLeaderboard() {
+        const r = await fetch('/api/leaderboard', { method:'POST' });
+        const list = await r.json();
+        let html = "";
+        list.forEach((u, index) => {
+            let icon = index === 0 ? "🥇" : (index === 1 ? "🥈" : "👤");
+            html += `<div class="list-item"><span class="${index===0?'rank-1':''}">${icon} User ${u.id}</span> <span>${u.invites} Refs</span></div>`;
+        });
+        document.getElementById('leaderboard').innerHTML = html;
+    }
+
+    // Auto refresh balance every 10s
+    setInterval(() => {
+        fetch('/api/user-data', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) })
+        .then(r=>r.json()).then(u => {
+             document.getElementById('bal').innerText = u.balance.toFixed(2) + " TON";
+        });
+    }, 10000);
+
+    init();
 </script>
 </body>
 </html>
