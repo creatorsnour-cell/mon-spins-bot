@@ -28,30 +28,29 @@ const cryptoPay = axios.create({
     headers: { 'Crypto-Pay-API-Token': CONFIG.CRYPTO_TOKEN }
 });
 
-// --- UTILS ---
+// --- USER INITIALIZATION & REFERRAL ---
 const initUser = (id, refBy = null) => {
     if (!db[id]) {
         db[id] = { 
             balance: 0.0, 
             hasDeposited: false, 
             referrals: 0, 
-            refBy: refBy,
+            refBy: (refBy && refBy != id) ? refBy : null,
             earnedFromRefs: 0,
             starsBonusClaimed: false 
         };
-        if (refBy && db[refBy]) {
-            db[refBy].referrals += 1;
-            // Reward 500 Stars if 500 refs
-            if (db[refBy].referrals === 500 && !db[refBy].starsBonusClaimed) {
-                db[refBy].balance += 5.0; // 500 Stars = 5 TON
-                db[refBy].starsBonusClaimed = true;
+        if (db[id].refBy && db[db[id].refBy]) {
+            db[db[id].refBy].referrals += 1;
+            // Bonus 500 Stars for 500 invites
+            if (db[db[id].refBy].referrals >= 500 && !db[db[id].refBy].starsBonusClaimed) {
+                db[db[id].refBy].balance += 5.0; // 5 TON equivalent
+                db[db[id].refBy].starsBonusClaimed = true;
             }
         }
         saveDB();
     }
 };
 
-// --- WEBHOOK ---
 app.post('/api/telegram', (req, res) => {
     const msg = req.body.message;
     if (msg && msg.text && msg.text.startsWith('/start')) {
@@ -63,6 +62,7 @@ app.post('/api/telegram', (req, res) => {
     res.sendStatus(200);
 });
 
+// --- PAYMENTS ---
 bot.on('pre_checkout_query', (q) => bot.answerPreCheckoutQuery(q.id, true));
 
 bot.on('successful_payment', (msg) => {
@@ -71,13 +71,12 @@ bot.on('successful_payment', (msg) => {
     const stars = msg.successful_payment.total_amount;
     const credit = stars * 0.01;
     db[userId].balance += credit;
-    db[userId].hasDeposited = true; // Unlock Withdrawals
+    db[userId].hasDeposited = true; // UNLOCKS WITHDRAW
     saveDB();
-    bot.sendMessage(userId, `💳 Deposit confirmed! +${credit} TON.`);
+    bot.sendMessage(userId, `✅ Deposit Successful! +${credit} TON.`);
 });
 
 // --- API ROUTES ---
-
 app.post('/api/user-data', (req, res) => {
     const { id } = req.body;
     initUser(id);
@@ -86,11 +85,11 @@ app.post('/api/user-data', (req, res) => {
 
 app.post('/api/deposit-stars', async (req, res) => {
     const { id, amount } = req.body;
-    if (amount < 5) return res.json({ success: false, error: "Min. deposit is 5 Stars" });
+    if (amount < 5) return res.json({ success: false, error: "Minimum is 5 Stars" });
     try {
-        const link = await bot.createInvoiceLink("Refill Stars", `Buy ${amount} stars`, `REF_${id}`, "", "XTR", [{ label: "Stars", amount: parseInt(amount) }]);
+        const link = await bot.createInvoiceLink("Refill", `Buy ${amount} stars`, `ID_${id}`, "", "XTR", [{ label: "Stars", amount: parseInt(amount) }]);
         res.json({ success: true, url: link });
-    } catch (e) { res.json({ success: false, error: e.message }); }
+    } catch (e) { res.json({ success: false }); }
 });
 
 app.post('/api/play', (req, res) => {
@@ -102,23 +101,19 @@ app.post('/api/play', (req, res) => {
     let win = 0;
     let result;
 
-    // HARD MODE: Lower win probability
+    // HARD MODE LOGIC
     if (game === 'dice') {
         result = Math.floor(Math.random() * 6) + 1;
-        if (result === 6) win = bet * 3; // Only 6 wins
+        if (result === 6) win = bet * 4; // Only 6 wins (Hard)
     } else if (game === 'slots') {
-        const items = ['🍎', '🍋', '💎', '7️⃣', '🍒'];
-        result = [items[Math.floor(Math.random()*5)], items[Math.floor(Math.random()*5)], items[Math.floor(Math.random()*5)]];
-        if (result[0] === result[1] && result[1] === result[2]) win = bet * 10;
-    } else if (game === 'crash') {
-        const crashAt = (Math.random() * 2).toFixed(2); // Often crashes before 2x
-        result = crashAt;
-        if (crashAt > 1.5) win = bet * 1.5;
+        const icons = ['💀', '💰', '💎', '🍒', '🍋'];
+        result = [icons[Math.floor(Math.random()*5)], icons[Math.floor(Math.random()*5)], icons[Math.floor(Math.random()*5)]];
+        if (result[0] === result[1] && result[1] === result[2]) win = bet * 15;
     }
 
     if (win > 0) {
         user.balance += win;
-        // 30% Referral Commission on gains
+        // 30% Referral Commission
         if (user.refBy && db[user.refBy]) {
             const comm = win * 0.30;
             db[user.refBy].balance += comm;
@@ -132,14 +127,14 @@ app.post('/api/play', (req, res) => {
 app.post('/api/withdraw', async (req, res) => {
     const { id, amount } = req.body;
     const user = db[id];
-    if (!user.hasDeposited) return res.json({ error: "You must make a first deposit to withdraw." });
-    if (amount < 1) return res.json({ error: "Minimum withdrawal is 1 TON" });
+    if (!user.hasDeposited) return res.json({ error: "You must deposit at least once to withdraw." });
+    if (amount < 1) return res.json({ error: "Minimum withdrawal: 1 TON" });
     if (user.balance < amount) return res.json({ error: "Insufficient balance" });
 
     try {
         const r = await cryptoPay.post('/transfer', { user_id: parseInt(id), asset: 'TON', amount: amount.toString(), spend_id: `W${Date.now()}` });
         if (r.data.ok) { user.balance -= parseFloat(amount); saveDB(); res.json({ success: true }); }
-    } catch (e) { res.json({ error: "CryptoBot Transfer Error" }); }
+    } catch (e) { res.json({ error: "Transfer failed" }); }
 });
 
-app.listen(CONFIG.PORT, () => console.log(`🚀 TITAN V19 ENG ON PORT ${CONFIG.PORT}`));
+app.listen(CONFIG.PORT);
