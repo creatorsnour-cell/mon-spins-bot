@@ -5,56 +5,77 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --neon: #00d2ff; }
-        body { background: #050505; color: white; font-family: sans-serif; text-align: center; margin: 0; padding-bottom: 70px; }
+        :root { --main: #00d2ff; --gold: #ffbc00; }
+        body { background: #050505; color: white; font-family: 'Inter', sans-serif; text-align: center; margin: 0; padding-bottom: 70px; overflow-x: hidden; }
         .card { background: #111; border-radius: 20px; margin: 12px; padding: 20px; border: 1px solid #222; }
-        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-play { background: var(--neon); color: black; }
-        .nav { position: fixed; bottom: 0; width: 100%; background: #111; display: flex; border-top: 1px solid #333; }
-        .nav-item { flex: 1; padding: 15px; font-size: 11px; opacity: 0.5; }
-        .active { opacity: 1; color: var(--neon); }
+        .balance { font-size: 38px; font-weight: 800; color: var(--main); text-shadow: 0 0 15px rgba(0,210,255,0.3); }
+        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .btn-main { background: var(--main); color: black; }
+        .nav { position: fixed; bottom: 0; width: 100%; background: #111; display: flex; border-top: 1px solid #333; z-index: 100; }
+        .nav-item { flex: 1; padding: 15px; font-size: 11px; opacity: 0.5; color: white; }
+        .nav-item.active { opacity: 1; color: var(--main); border-top: 2px solid var(--main); }
         .hidden { display: none; }
-        .task-card { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; padding: 15px; border-radius: 15px; margin-bottom: 10px; }
+        input { width: 85%; padding: 12px; background: #1a1a1a; border: 1px solid #333; color: white; border-radius: 10px; text-align: center; }
+        .lead-row { display: flex; justify-content: space-between; padding: 10px; background: #1a1a1a; margin-top: 5px; border-radius: 10px; font-size: 13px; }
+        #display { font-size: 60px; height: 100px; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        .spinning { animation: spin 0.1s infinite linear; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div id="game-page">
-    <div class="card"><div style="opacity:0.5;font-size:10px;">BALANCE</div><div id="bal" style="font-size:30px;color:var(--neon);">0.00 TON</div></div>
+<div id="p-game">
     <div class="card">
-        <div id="display" style="font-size:50px;">🎲</div>
-        <input type="number" id="bet" placeholder="Bet TON" style="width:80%;padding:10px;margin:10px;border-radius:10px;border:none;background:#222;color:white;">
-        <button class="btn btn-play" onclick="play()">SPIN</button>
+        <div style="opacity:0.5; font-size:11px;">AVAILABLE BALANCE</div>
+        <div id="bal" class="balance">0.00 TON</div>
+    </div>
+    <div class="card">
+        <div id="display">🎲</div>
+        <select id="g-type" class="btn" style="background:#222; color:white; border:1px solid #444;" onchange="updateIcon()">
+            <option value="dice">🎲 Lucky Dice (x4)</option>
+            <option value="slots">🎰 Super Slots (x10)</option>
+        </select>
+        <input type="number" id="bet" placeholder="Amount (TON)" style="margin-top:15px;">
+        <button class="btn btn-main" onclick="play()">START SPIN</button>
     </div>
 </div>
 
-<div id="task-page" class="hidden">
+<div id="p-task" class="hidden">
     <div class="card">
-        <h3>Tasks</h3>
-        <div class="task-card">
+        <h3>Daily Tasks</h3>
+        <div style="background:#1a1a1a; padding:15px; border-radius:15px; display:flex; justify-content:space-between; align-items:center;">
             <div style="text-align:left;">
                 <div style="font-weight:bold;">Join @starrussi</div>
-                <div style="font-size:10px;color:var(--neon);">Reward: 0.02 TON</div>
+                <div style="color:var(--main); font-size:12px;">+0.02 TON Reward</div>
             </div>
-            <button class="btn" style="width:80px;margin:0;background:white;color:black;" onclick="checkTask()">DONE</button>
+            <button class="btn" style="width:70px; margin:0; background:white; color:black; padding:8px;" onclick="checkTask()">DONE</button>
         </div>
-        <button class="btn" style="background:#222;color:white;" onclick="tg.openTelegramLink('https://t.me/starrussi')">JOIN CHANNEL</button>
+        <button class="btn" style="background:#222; color:white; border:1px solid #444;" onclick="tg.openTelegramLink('https://t.me/starrussi')">OPEN CHANNEL</button>
     </div>
 </div>
 
-<div id="ref-page" class="hidden">
+<div id="p-ref" class="hidden">
     <div class="card">
-        <h3>Referral Leaderboard</h3>
-        <div id="leaderboard" style="font-size:12px; text-align:left; margin-bottom:15px;"></div>
-        <button class="btn btn-play" onclick="copyRef()">COPY MY LINK</button>
+        <h3>Referral Program</h3>
+        <p>Invite friends and earn <span style="color:var(--main);">30%</span> of their winnings!</p>
+        <div id="ref-status" style="font-size:13px; margin-bottom:15px; color:#aaa;">Invited: 0 users</div>
+        <button class="btn btn-main" onclick="copyRef()">COPY MY INVITE LINK</button>
+    </div>
+    <div class="card">
+        <h4 style="margin:0 0 10px 0;">🏆 Top Referrers</h4>
+        <div id="leaderboard">Loading...</div>
     </div>
 </div>
 
-<div id="wallet-page" class="hidden">
+<div id="p-wallet" class="hidden">
     <div class="card">
         <h3>Wallet</h3>
-        <button class="btn" style="background:#ffbc00;" onclick="payStars()">⭐ DEPOSIT STARS (Min. 5)</button>
-        <button class="btn" style="background:#ff4444;" onclick="withdraw()">WITHDRAW (Min. 1 TON)</button>
+        <button class="btn" style="background:var(--gold); color:black;" onclick="payStars()">⭐ DEPOSIT STARS (Min. 5)</button>
+        <button class="btn" style="background:#222; color:white; border:1px solid #444;" onclick="payCrypto()">💎 DEPOSIT TON (CryptoBot)</button>
+        <hr style="border:0.5px solid #333; margin:20px 0;">
+        <input type="number" id="wit-amt" placeholder="Withdraw TON">
+        <button class="btn" style="background:#ff4444; color:white;" onclick="withdraw()">WITHDRAW (Min. 1 TON)</button>
+        <p style="font-size:10px; color:#666; margin-top:10px;">* Withdrawal requires at least 1 deposit.</p>
     </div>
 </div>
 
@@ -68,48 +89,90 @@
 <script>
     const tg = window.Telegram.WebApp;
     const uid = tg.initDataUnsafe.user?.id || 7019851823;
+    let botName = "Newspin_onebot";
 
     function tab(name, el) {
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         el.classList.add('active');
-        ['game', 'task', 'ref', 'wallet'].forEach(p => document.getElementById(p+'-page').classList.add('hidden'));
-        document.getElementById(name+'-page').classList.remove('hidden');
-        if(name === 'ref') loadLeaderboard();
+        ['game', 'task', 'ref', 'wallet'].forEach(p => document.getElementById('p-'+p).classList.add('hidden'));
+        document.getElementById('p-'+name).classList.remove('hidden');
+        if(name === 'ref') refreshLeaderboard();
+    }
+
+    async function sync() {
+        const r = await fetch('/api/user-data', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
+        const d = await r.json();
+        document.getElementById('bal').innerText = d.balance.toFixed(2) + " TON";
+        document.getElementById('ref-status').innerText = `Invited: ${d.referrals || 0} users`;
+        botName = d.botUser;
+    }
+
+    async function play() {
+        const bet = document.getElementById('bet').value;
+        const game = document.getElementById('g-type').value;
+        const disp = document.getElementById('display');
+        if(!bet || bet <= 0) return tg.showAlert("Enter a bet amount!");
+
+        disp.classList.add('spinning');
+        const r = await fetch('/api/play', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, bet, game}) });
+        const d = await r.json();
+
+        setTimeout(() => {
+            disp.classList.remove('spinning');
+            if(d.error) return tg.showAlert(d.error);
+            disp.innerText = Array.isArray(d.result) ? d.result.join('') : d.result;
+            if(d.win > 0) {
+                tg.showAlert(`BIG WIN! +${d.win} TON`);
+                tg.HapticFeedback.notificationOccurred('success');
+            }
+            sync();
+        }, 600);
     }
 
     async function checkTask() {
         const r = await fetch('/api/check-task', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
         const d = await r.json();
-        tg.showAlert(d.success ? d.message : d.error);
+        tg.showAlert(d.message);
         sync();
     }
 
-    async function loadLeaderboard() {
+    async function refreshLeaderboard() {
         const r = await fetch('/api/leaderboard');
         const d = await r.json();
-        document.getElementById('leaderboard').innerHTML = d.map((u, i) => `<div>${i+1}. User ${u.id} - <b>${u.referrals} refs</b></div>`).join('');
+        document.getElementById('leaderboard').innerHTML = d.map((u, i) => `
+            <div class="lead-row">
+                <span>${i+1}. User ID: ${u.id.toString().slice(0,4)}...</span>
+                <span style="color:var(--main)">${u.refs} refs</span>
+            </div>
+        `).join('');
     }
 
-    async function sync() {
-        const r = await fetch('/api/user-data', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid}) });
-        const d = await r.json(); document.getElementById('bal').innerText = d.balance.toFixed(2) + " TON";
-    }
-
-    // -- Fonctions play, copyRef, payStars, withdraw (identiques à V19) --
     function copyRef() {
-        const link = `https://t.me/Newspin_onebot?start=${uid}`;
-        const input = document.createElement('input'); document.body.appendChild(input); input.value = link; input.select(); document.execCommand('copy'); document.body.removeChild(input);
-        tg.showAlert("Link copied!");
+        const link = `https://t.me/${botName}?start=${uid}`;
+        const el = document.createElement('textarea');
+        el.value = link; document.body.appendChild(el); el.select();
+        document.execCommand('copy'); document.body.removeChild(el);
+        tg.showAlert("Invite link copied!");
     }
 
-    async function play() {
-        const bet = document.getElementById('bet').value;
-        const r = await fetch('/api/play', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, bet:parseFloat(bet), game:'dice'}) });
+    async function payStars() {
+        const amt = prompt("Amount of Stars (Min. 5):");
+        const r = await fetch('/api/deposit-stars', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
         const d = await r.json();
-        if(d.error) return tg.showAlert(d.error);
-        document.getElementById('display').innerText = d.result;
-        if(d.win > 0) tg.showAlert("WIN! +"+d.win);
+        if(d.url) tg.openTelegramLink(d.url); else tg.showAlert(d.error || "Error");
+    }
+
+    async function withdraw() {
+        const amt = document.getElementById('wit-amt').value;
+        const r = await fetch('/api/withdraw', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id:uid, amount:amt}) });
+        const d = await r.json();
+        tg.showAlert(d.success ? "Withdrawal processed!" : d.error);
         sync();
+    }
+
+    function updateIcon() {
+        const type = document.getElementById('g-type').value;
+        document.getElementById('display').innerText = type === 'dice' ? '🎲' : '🎰';
     }
 
     sync();
