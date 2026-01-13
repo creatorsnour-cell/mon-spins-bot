@@ -3,156 +3,296 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const fs = require('fs');
 const cors = require('cors');
+const path = require('path');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
+// --- CONFIGURATION ---
 const CONFIG = {
-    BOT_TOKEN: '8554964276:AAFXlTNSQXWQy8RhroiqwjcqaSg7lYzY9GU',
-    CRYPTO_TOKEN: '510513:AAeEQr2dTYwFbaX56NPAgZluhSt34zua2fc',
-    WEBHOOK_URL: 'https://mon-spins-bot.onrender.com',
-    CHANNEL_ID: '@starrussi',
-    BOT_USERNAME: 'Newspin_onebot',
-    PORT: process.env.PORT || 3000
+    BOT_TOKEN: '8554964276:AAFXlTNSQXWQy8RhroiqwjcqaSg7lYzY9GU', // Your Token
+    CRYPTO_TOKEN: '510513:AAeEQr2dTYwFbaX56NPAgZluhSt34zua2fc', // Your CryptoBot Token
+    WEBHOOK_URL: 'https://mon-spins-bot.onrender.com', // Your Render URL
+    CHANNEL_ID: '@starrussi', // Channel for tasks
+    PORT: process.env.PORT || 3000,
+    ADMIN_ID: 7019851823 // Replace with your numeric ID for alerts
 };
 
 const bot = new TelegramBot(CONFIG.BOT_TOKEN);
 bot.setWebHook(`${CONFIG.WEBHOOK_URL}/api/telegram`);
 
+// --- DATABASE MANAGER ---
 const DB_FILE = './database.json';
 let db = fs.existsSync(DB_FILE) ? JSON.parse(fs.readFileSync(DB_FILE, 'utf8')) : {};
 const saveDB = () => fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 
-// Initialize user with referral logic
-const initUser = (id, refBy = null) => {
+// Helper: Get or Create User
+const getUser = (id) => {
     if (!db[id]) {
         db[id] = { 
-            balance: 0.0, 
+            balance: 0.00, 
             hasDeposited: false, 
-            referrals: 0, 
-            refBy: (refBy && refBy != id && db[refBy]) ? refBy : null,
-            taskDone: false,
-            totalWon: 0
+            referrer: null, 
+            invites: 0, 
+            earningsRef: 0,
+            tasks: { joined_channel: false },
+            acceptedRules: false
         };
-        if (db[id].refBy) {
-            db[db[id].refBy].referrals += 1;
-            // Reward: 500 Stars (5 TON) if 500 referrals reached
-            if (db[db[id].refBy].referrals === 500) {
-                db[db[id].refBy].balance += 5.0;
-                bot.sendMessage(db[id].refBy, "🎁 Milestone reached! You received 5 TON for inviting 500 users!");
-            }
-        }
         saveDB();
     }
+    return db[id];
 };
 
+const cryptoPay = axios.create({
+    baseURL: 'https://pay.crypt.bot/api',
+    headers: { 'Crypto-Pay-API-Token': CONFIG.CRYPTO_TOKEN }
+});
+
+// --- TELEGRAM HANDLERS ---
+
 app.post('/api/telegram', (req, res) => {
-    const msg = req.body.message;
-    if (msg && msg.text && msg.text.startsWith('/start')) {
-        const refBy = msg.text.split(' ')[1];
-        initUser(msg.from.id, refBy);
-    }
     bot.processUpdate(req.body);
     res.sendStatus(200);
 });
 
-bot.on('pre_checkout_query', (q) => bot.answerPreCheckoutQuery(q.id, true));
+// Handle Start & Referrals
+bot.onText(/\/start (.+)?/, (msg, match) => {
+    const chatId = msg.chat.id;
+    const refParam = match[1]; // The ID of the person who invited
+    
+    const user = getUser(chatId);
 
+    // If new user and has a referrer parameter
+    if (refParam && user.referrer === null && parseInt(refParam) !== chatId) {
+        user.referrer = parseInt(refParam);
+        
+        // Update Referrer Stats
+        if (db[refParam]) {
+            db[refParam].invites += 1;
+            // Check Milestone 500
+            if (db[refParam].invites === 500) {
+                db[refParam].balance += 500 * 0.01; // Adding 500 Stars worth in TON
+                bot.sendMessage(refParam, "🏆 CONGRATS! You reached 500 invites! You won 500 Stars + 1 NFT (Check Wallet).");
+            } else {
+                bot.sendMessage(refParam, `🚀 New referral! You now have ${db[refParam].invites} invites.`);
+            }
+        }
+        saveDB();
+    }
+
+    bot.sendMessage(chatId, "👋 Welcome to NewSpin Casino! Click the button below to play.", {
+        reply_markup: {
+            inline_keyboard: [[{ text: "🎰 PLAY NOW", web_app: { url: CONFIG.WEBHOOK_URL } }]]
+        }
+    });
+});
+
+// Pre-checkout (Stars)
+bot.on('pre_checkout_query', (query) => {
+    bot.answerPreCheckoutQuery(query.id, true).catch(() => {});
+});
+
+// Successful Payment (Stars)
 bot.on('successful_payment', (msg) => {
     const userId = msg.from.id;
-    const credit = msg.successful_payment.total_amount * 0.01;
-    db[userId].balance += credit;
-    db[userId].hasDeposited = true;
+    const amountStars = msg.successful_payment.total_amount;
+    const user = getUser(userId);
+
+    // Rate: 1 Star = 0.015 TON (Adjusted for logic)
+    const credit = amountStars * 0.015; 
+    
+    user.balance += credit;
+    user.hasDeposited = true; // Mark as deposited
     saveDB();
-    bot.sendMessage(userId, `✅ Deposit Success! +${credit} TON credited.`);
+
+    bot.sendMessage(userId, `✅ Deposit Successful! +${credit.toFixed(2)} TON (${amountStars} Stars).`);
 });
 
-// --- API ROUTES ---
+// --- API ROUTES FOR WEBAPP ---
 
-app.post('/api/user-data', (req, res) => {
+// 1. Get User Data
+app.post('/api/user-data', async (req, res) => {
     const { id } = req.body;
-    initUser(id);
-    res.json({ ...db[id], botUser: CONFIG.BOT_USERNAME });
+    const user = getUser(id);
+    
+    // Check Task (Channel Subscription)
+    let isSubscribed = user.tasks.joined_channel;
+    if (!isSubscribed) {
+        try {
+            const chatMember = await bot.getChatMember(CONFIG.CHANNEL_ID, id);
+            if (['creator', 'administrator', 'member'].includes(chatMember.status)) {
+                // Determine checking, wait for user to click "Check" in UI to reward
+            }
+        } catch (e) { console.log("Check error", e.message); }
+    }
+
+    res.json(user);
 });
 
-app.post('/api/check-task', async (req, res) => {
+// 2. Accept Rules
+app.post('/api/accept-rules', (req, res) => {
     const { id } = req.body;
+    const user = getUser(id);
+    user.acceptedRules = true;
+    saveDB();
+    res.json({ success: true });
+});
+
+// 3. Verify Task
+app.post('/api/verify-task', async (req, res) => {
+    const { id } = req.body;
+    const user = getUser(id);
+    
+    if (user.tasks.joined_channel) return res.json({ success: true, alreadyDone: true });
+
     try {
         const chatMember = await bot.getChatMember(CONFIG.CHANNEL_ID, id);
-        const isSubscribed = ['member', 'administrator', 'creator'].includes(chatMember.status);
-        if (isSubscribed && !db[id].taskDone) {
-            db[id].balance += 0.02;
-            db[id].taskDone = true;
+        if (['creator', 'administrator', 'member'].includes(chatMember.status)) {
+            user.tasks.joined_channel = true;
+            user.balance += 0.02;
             saveDB();
-            res.json({ success: true, message: "Reward 0.02 TON added!" });
+            return res.json({ success: true, rewarded: true, newBalance: user.balance });
         } else {
-            res.json({ success: false, message: db[id].taskDone ? "Already done!" : "Please join the channel first!" });
+            return res.json({ success: false, error: "You are not subscribed yet." });
         }
-    } catch (e) { res.json({ success: false, message: "Error checking channel." }); }
-});
-
-app.get('/api/leaderboard', (req, res) => {
-    const top = Object.entries(db)
-        .map(([id, data]) => ({ id, refs: data.referrals || 0 }))
-        .sort((a, b) => b.refs - a.refs)
-        .slice(0, 5);
-    res.json(top);
-});
-
-app.post('/api/play', (req, res) => {
-    const { id, bet, game } = req.body;
-    const user = db[id];
-    if (!user || user.balance < bet) return res.json({ error: "Insufficient balance" });
-    
-    user.balance -= parseFloat(bet);
-    let win = 0;
-    let result;
-
-    // HARD MODE LOGIC (Lower probabilities)
-    if (game === 'dice') {
-        result = Math.floor(Math.random() * 6) + 1;
-        if (result === 6) win = bet * 4; // Only 16.6% chance to win
-    } else if (game === 'slots') {
-        const symbols = ['💎', '🍒', '🍋', '7️⃣', '💀'];
-        result = [symbols[Math.floor(Math.random()*5)], symbols[Math.floor(Math.random()*5)], symbols[Math.floor(Math.random()*5)]];
-        if (result[0] === result[1] && result[1] === result[2] && result[0] !== '💀') win = bet * 10;
+    } catch (e) {
+        return res.json({ success: false, error: "Bot is not admin of the channel or error." });
     }
-
-    if (win > 0) {
-        user.balance += win;
-        user.totalWon += win;
-        // 30% Referral Commission
-        if (user.refBy && db[user.refBy]) {
-            const comm = win * 0.30;
-            db[user.refBy].balance += comm;
-        }
-    }
-    saveDB();
-    res.json({ result, win, balance: user.balance });
 });
 
+// 4. Deposit Stars (Min 5)
 app.post('/api/deposit-stars', async (req, res) => {
     const { id, amount } = req.body;
-    if (amount < 5) return res.json({ error: "Minimum is 5 Stars" });
+    if (amount < 5) return res.json({ success: false, error: "Minimum deposit is 5 Stars." });
+
     try {
-        const link = await bot.createInvoiceLink("Recharge", `${amount} Stars`, `PAY_${id}`, "", "XTR", [{ label: "Stars", amount: parseInt(amount) }]);
+        const link = await bot.createInvoiceLink(
+            "Casino Credits", 
+            `Topup ${amount} Stars`, 
+            `PAY_${id}_${Date.now()}`, 
+            "", 
+            "XTR", 
+            [{ label: "Stars", amount: parseInt(amount) }]
+        );
         res.json({ success: true, url: link });
-    } catch (e) { res.json({ success: false }); }
+    } catch (e) { res.json({ success: false, error: e.message }); }
 });
 
+// 5. Play Games (Hard Mode)
+app.post('/api/play', (req, res) => {
+    const { id, bet, game } = req.body;
+    const user = getUser(id);
+    
+    if (user.balance < bet) return res.json({ error: "Insufficient balance" });
+
+    user.balance -= parseFloat(bet);
+    let winAmount = 0;
+    let resultData = {};
+
+    // --- GAME LOGIC (RIGGED/HARD) ---
+    // Win chance 25% generally
+    const isWin = Math.random() > 0.75; 
+
+    if (game === 'dice') {
+        // Dice Logic
+        const roll = Math.floor(Math.random() * 6) + 1;
+        resultData = { roll };
+        if (isWin) winAmount = bet * 3; 
+    } 
+    else if (game === 'slots') {
+        // Slots Logic (Cherry, Lemon, Grape, Diamond)
+        const symbols = ['🍒', '🍋', '🍇', '💎'];
+        let r1, r2, r3;
+        
+        if (isWin) {
+            // Force 3 same symbols
+            r1 = r2 = r3 = symbols[Math.floor(Math.random() * symbols.length)];
+            winAmount = bet * 5; // Big multiplier because it's hard
+        } else {
+            // Force mismatch
+            r1 = symbols[Math.floor(Math.random() * 4)];
+            r2 = symbols[Math.floor(Math.random() * 4)];
+            r3 = symbols[Math.floor(Math.random() * 4)];
+            if(r1 === r2 && r2 === r3) r3 = (r1 === '🍒' ? '🍋' : '🍒'); // Ensure loss
+        }
+        resultData = { slots: [r1, r2, r3] };
+    }
+    else if (game === 'mines') {
+        // Mines Logic (Immediate check for simplicity)
+        // In this version, user picks a tile, backend decides instantly if it was a bomb
+        const safe = Math.random() > 0.6; // 40% chance to hit a mine on first click
+        if (safe) winAmount = bet * 1.5;
+        else winAmount = 0;
+        resultData = { safe: safe };
+    }
+
+    // --- PAYOUT & REFERRAL COMMISSION ---
+    if (winAmount > 0) {
+        user.balance += winAmount;
+        
+        // 30% Commission to Referrer
+        if (user.referrer && db[user.referrer]) {
+            const refBonus = winAmount * 0.30;
+            db[user.referrer].balance += refBonus;
+            db[user.referrer].earningsRef += refBonus;
+            // Notify referrer occasionally or silently update
+        }
+    }
+
+    saveDB();
+    res.json({ 
+        win: winAmount > 0, 
+        amount: winAmount, 
+        balance: user.balance, 
+        gameData: resultData 
+    });
+});
+
+// 6. Withdraw (Strict Rules)
 app.post('/api/withdraw', async (req, res) => {
     const { id, amount } = req.body;
-    const user = db[id];
-    if (!user.hasDeposited) return res.json({ error: "Deposit at least once to unlock withdrawal!" });
-    if (amount < 1) return res.json({ error: "Minimum withdrawal is 1 TON" });
+    const user = getUser(id);
+
+    // Rule 1: Min Amount
+    if (amount < 0.5) return res.json({ error: "Minimum withdrawal is 0.5 TON" });
+    
+    // Rule 2: Sufficient Balance
     if (user.balance < amount) return res.json({ error: "Insufficient balance" });
+    
+    // Rule 3: Must have deposited at least once
+    if (!user.hasDeposited) return res.json({ error: "You must make at least 1 deposit before withdrawing." });
 
     try {
-        const r = await cryptoPay.post('/transfer', { user_id: parseInt(id), asset: 'TON', amount: amount.toString(), spend_id: `W${Date.now()}` });
-        if (r.data.ok) { user.balance -= parseFloat(amount); saveDB(); res.json({ success: true }); }
-    } catch (e) { res.json({ error: "Withdraw failed" }); }
+        // CryptoBot Transfer
+        const r = await cryptoPay.post('/transfer', { 
+            user_id: parseInt(id), 
+            asset: 'TON', 
+            amount: amount.toString(), 
+            spend_id: `W_${id}_${Date.now()}` 
+        });
+        
+        if (r.data.ok) { 
+            user.balance -= parseFloat(amount); 
+            saveDB(); 
+            res.json({ success: true }); 
+        } else {
+            res.json({ error: "Transfer failed (API Error)" });
+        }
+    } catch (e) { res.json({ error: "CryptoBot Error: Check API Key balance" }); }
 });
 
-app.listen(CONFIG.PORT);
+// 7. Leaderboard
+app.post('/api/leaderboard', (req, res) => {
+    // Sort users by invites
+    const sorted = Object.entries(db)
+        .map(([id, data]) => ({ id, invites: data.invites }))
+        .sort((a, b) => b.invites - a.invites)
+        .slice(0, 5);
+    res.json(sorted);
+});
+
+app.listen(CONFIG.PORT, () => {
+    console.log(`🚀 BOT SERVER RUNNING ON PORT ${CONFIG.PORT}`);
+});
