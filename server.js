@@ -12,7 +12,7 @@ app.use(express.static(__dirname));
 
 // --- CONFIGURATION ---
 const CONFIG = {
-    BOT_TOKEN: '8554964276:AAFXlTNSQXWQy8RhroiqwjcqaSg7lYzY9GU', // Your Token
+    BOT_TOKEN: '8389778704:AAHQ0jEpJ2Ii2Mr4FtFR8REFnoxI4hoc1GQ', // Your Token
     CRYPTO_TOKEN: '510513:AAeEQr2dTYwFbaX56NPAgZluhSt34zua2fc', // Your CryptoBot Token
     WEBHOOK_URL: 'https://mon-spins-bot.onrender.com', // Your Render URL
     CHANNEL_ID: '@starrussi', // Channel for tasks
